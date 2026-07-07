@@ -1,7 +1,9 @@
-use crate::parse_lines::{Block, Keyword};
+use crate::{
+    execution_policy::ExecutionPolicy,
+    parse_lines::{Block, Keyword},
+};
 
 pub struct CodeBlock {
-    start_quota: String,
     inside: String,
 }
 
@@ -13,7 +15,7 @@ impl CodeBlock {
 
 pub struct CommandLine {
     keyword: Keyword,
-    params: Vec<String>
+    params: Vec<String>,
 }
 
 impl CommandLine {
@@ -26,7 +28,7 @@ impl CommandLine {
     }
 }
 
-pub fn attempt_parse(raw: String) -> Vec<CodeBlock> {
+pub fn attempt_parse(raw: String, policy: &mut ExecutionPolicy) -> Result<Vec<CodeBlock>, String> {
     let blocks = Block::init();
     let lines: Vec<&str> = raw.lines().collect();
 
@@ -40,23 +42,34 @@ pub fn attempt_parse(raw: String) -> Vec<CodeBlock> {
             let start_quota = line.to_string();
             let end_quota = block.get_end_quota();
 
-            if let Some(end_i) = lines[i + 1..]
-                .iter()
-                .position(|l| l.trim() == end_quota)
-            {
+            if let Some(end_i) = lines[i + 1..].iter().position(|l| l.trim() == end_quota) {
                 let end_i = i + 1 + end_i;
 
                 let inside = lines[i + 1..end_i].join("\n");
 
-                code_blocks.push(CodeBlock {
-                    start_quota,
-                    inside,
-                });
+                if let Some(sh) = block.ep_special_handler {
+                    sh(policy, inside).map_err(|error| {
+                        format!(
+                            "Failed to parse {start_quota} block starting at line {}: {error}",
+                            i + 1
+                        )
+                    })?;
+                    continue;
+                }
+
+                code_blocks.push(CodeBlock { inside });
             } else {
-                println!("No end quota found");
+                if policy.should_halt_on_code_block_parse_error() {
+                    return Err(format!(
+                        "Missing end quota at line {} for {}: {}",
+                        i + 1,
+                        start_quota,
+                        end_quota
+                    ));
+                }
             }
         }
     }
 
-    code_blocks
+    Ok(code_blocks)
 }

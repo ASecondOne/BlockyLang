@@ -1,22 +1,29 @@
 use std::sync::Arc;
 
-use crate::parse_blocks::CommandLine;
+use crate::{execution_policy::ExecutionPolicy, parse_blocks::CommandLine};
 
 enum ParseResult {
     One(String),
-    Many(Vec<String>),
 }
 
 // Standard escape quota </...>
 pub struct Block {
-    definition: String
+    definition: String,
+    pub ep_special_handler: Option<fn(&mut ExecutionPolicy, String) -> Result<(), String>>,
 }
 
 impl Block {
     pub fn init() -> Vec<Self> {
         let mut out = Vec::new();
 
-        out.push(Block { definition: "<execute>".to_string() });
+        out.push(Block {
+            definition: "<execute>".to_string(),
+            ep_special_handler: None,
+        });
+        out.push(Block {
+            definition: "<execution_policy>".to_string(),
+            ep_special_handler: Some(ExecutionPolicy::change_policy),
+        });
 
         out
     }
@@ -58,14 +65,14 @@ impl Keyword {
 
                 1
             }),
-            parser: Arc::new(|a: String | {
+            parser: Arc::new(|a: String| {
                 if let (Some(start), Some(end)) = (a.find('"'), a.rfind('"')) {
                     let inside = &a[start + 1..end];
                     return ParseResult::One(inside.to_string());
                 }
 
                 ParseResult::One("".to_string())
-            })
+            }),
         });
 
         out
@@ -81,10 +88,9 @@ impl Keyword {
 
                 match (keyword.parser)(line) {
                     ParseResult::One(s) => params.push(s),
-                    ParseResult::Many(v) => params.extend(v),
                 }
 
-               return Some(CommandLine::new((*keyword).clone(), params));
+                return Some(CommandLine::new((*keyword).clone(), params));
             }
         }
 

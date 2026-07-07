@@ -1,3 +1,7 @@
+<execution_policy>
+    OnCodeBlockParseError = Skip
+</execution_policy>
+
 <execute>
     print "Hello World 1";
     
