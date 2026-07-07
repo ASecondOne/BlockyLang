@@ -1,9 +1,14 @@
-use crate::parts::{Block, Keyword};
+use crate::parse_lines::{Block, Keyword};
 
-struct CodeBlock {
+pub struct CodeBlock {
     start_quota: String,
     inside: String,
-    end_quota: String,
+}
+
+impl CodeBlock {
+    pub fn get_inside(&self) -> String {
+        self.inside.clone()
+    }
 }
 
 pub struct CommandLine {
@@ -21,7 +26,7 @@ impl CommandLine {
     }
 }
 
-pub fn attempt_parse(raw: String) {
+pub fn attempt_parse(raw: String) -> Vec<CodeBlock> {
     let blocks = Block::init();
     let lines: Vec<&str> = raw.lines().collect();
 
@@ -46,7 +51,6 @@ pub fn attempt_parse(raw: String) {
                 code_blocks.push(CodeBlock {
                     start_quota,
                     inside,
-                    end_quota,
                 });
             } else {
                 println!("No end quota found");
@@ -54,21 +58,5 @@ pub fn attempt_parse(raw: String) {
         }
     }
 
-    for codeblock in code_blocks {
-        parse_execute_block(codeblock);
-    }
-}
-
-fn parse_execute_block(block: CodeBlock) {
-    let insides = block.inside;
-
-    let keywords = Keyword::init();
-
-    for line in insides.lines().map(str::trim).filter(|l| !l.is_empty()) {
-        let out = Keyword::attempt_parse(line.to_string(), &keywords);
-
-        if out.is_some() {
-            out.unwrap().execute();
-        }
-    }
+    code_blocks
 }

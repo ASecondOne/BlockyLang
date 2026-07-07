@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "BlockyLang"
+name = "blocky_lang"
 version = "0.1.0"
 dependencies = [
  "colored",

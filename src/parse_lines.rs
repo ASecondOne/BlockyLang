@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::parser::CommandLine;
+use crate::parse_blocks::CommandLine;
 
 enum ParseResult {
     One(String),
