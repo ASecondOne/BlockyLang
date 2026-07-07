@@ -1,9 +1,24 @@
-use crate::parts::Block;
+use crate::parts::{Block, Keyword};
 
 struct CodeBlock {
-    pub start_quota: String,
+    start_quota: String,
     inside: String,
     end_quota: String,
+}
+
+pub struct CommandLine {
+    keyword: Keyword,
+    params: Vec<String>
+}
+
+impl CommandLine {
+    pub fn new(keyword: Keyword, params: Vec<String>) -> Self {
+        CommandLine { keyword, params }
+    }
+
+    pub fn execute(&mut self) {
+        let _exit_code = (self.keyword.runner)(&self.params);
+    }
 }
 
 pub fn attempt_parse(raw: String) {
@@ -40,6 +55,20 @@ pub fn attempt_parse(raw: String) {
     }
 
     for codeblock in code_blocks {
-        println!("Block Found: {}", codeblock.start_quota)
+        parse_execute_block(codeblock);
+    }
+}
+
+fn parse_execute_block(block: CodeBlock) {
+    let insides = block.inside;
+
+    let keywords = Keyword::init();
+
+    for line in insides.lines().map(str::trim).filter(|l| !l.is_empty()) {
+        let out = Keyword::attempt_parse(line.to_string(), &keywords);
+
+        if out.is_some() {
+            out.unwrap().execute();
+        }
     }
 }
