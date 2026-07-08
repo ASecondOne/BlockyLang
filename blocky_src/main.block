@@ -2,6 +2,11 @@
     OnCodeBlockParseError = Skip
 </execution_policy>
 
+<define>
+    let num = 4;
+    let string = "Hello";
+</define>
+
 <execute>
     print "Hello World 1";
     

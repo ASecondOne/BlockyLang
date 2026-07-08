@@ -1,15 +1,19 @@
 use crate::{
-    execution_policy::ExecutionPolicy,
-    parse_lines::{Block, Keyword},
+    execution_policy::ExecutionPolicy, parse_lines::{Block, BlockType, Keyword},
 };
 
 pub struct CodeBlock {
+    block_type: BlockType,
     inside: String,
 }
 
 impl CodeBlock {
     pub fn get_inside(&self) -> String {
         self.inside.clone()
+    }
+
+    pub fn get_block_type(&self) -> BlockType {
+        self.block_type.clone()
     }
 }
 
@@ -57,7 +61,16 @@ pub fn attempt_parse(raw: String, policy: &mut ExecutionPolicy) -> Result<Vec<Co
                     continue;
                 }
 
-                code_blocks.push(CodeBlock { inside });
+                let code_block_type = BlockType::parse(&start_quota);
+
+                if code_block_type == BlockType::Unknown {
+                    return Err(format!("Unknown BlockType: {}", start_quota.clone()));
+                }
+                
+                code_blocks.push(CodeBlock { 
+                    inside: inside,
+                    block_type: code_block_type
+                });
             } else {
                 if policy.should_halt_on_code_block_parse_error() {
                     return Err(format!(
