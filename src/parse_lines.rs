@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
-use crate::{execution_policy::ExecutionPolicy, parse_blocks::CommandLine};
+use crate::{execution_policy::ExecutionPolicy, parse_blocks::CommandLine, var_handler::{VarMap, VarType, parse_type}};
 
 enum ParseResult {
     One(String),
+    Many(Vec<String>),
+    ParseError(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -67,8 +69,8 @@ impl Block {
 #[derive(Clone)]
 pub struct Keyword {
     pub definition: String,
-    pub runner: Arc<dyn Fn(&[String]) -> i32>,
-    parser: Arc<dyn Fn(String) -> ParseResult>,
+    pub runner: Arc<dyn Fn(&[String], &mut VarMap) -> i32>,
+    parser: Arc<dyn Fn(String, &mut VarMap) -> ParseResult>,
     pub allowed_in: Vec<BlockType>,
 }
 
@@ -78,7 +80,7 @@ impl Keyword {
 
         out.push(Keyword {
             definition: "print".to_string(),
-            runner: Arc::new(|a: &[String]| {
+            runner: Arc::new(|a: &[String], _vars: &mut VarMap| {
                 if let Some(first) = a.first() {
                     println!("{first}");
                     return 0;
@@ -86,7 +88,7 @@ impl Keyword {
 
                 1
             }),
-            parser: Arc::new(|a: String| {
+            parser: Arc::new(|a: String, _vars: &mut VarMap| {
                 if let (Some(start), Some(end)) = (a.find('"'), a.rfind('"')) {
                     let inside = &a[start + 1..end];
                     return ParseResult::One(inside.to_string());
@@ -98,16 +100,37 @@ impl Keyword {
         });
 
         out.push(Keyword { 
-            definition: (), 
-            runner: (), 
-            parser: (), 
-            allowed_in: () 
+            definition: "let".to_string(), 
+            runner: Arc::new(|a: &[String], _vars: &mut VarMap| {
+                
+                if let [name, value, ..] = a {
+                    
+                }
+
+                1
+            }),
+            parser: Arc::new(|a: String, _vars: &mut VarMap| {
+
+                let (name, value) = a
+                    .strip_prefix("let ")
+                    .and_then(|s| s.split_once('='))
+                    .map(|(n, v)| (n.trim(), v.trim()))
+                    .unwrap();
+
+                match parse_type(value) {
+                    VarType::Unknown => return ParseResult::ParseError("Unknown Data Type".to_string()),
+                    _ => {}
+                }
+
+                ParseResult::Many(vec![name.to_string(), value.to_string()])
+            }),
+            allowed_in: vec![BlockType::Define] 
         });
 
         out
     }
 
-    pub fn attempt_parse(mut line: String, keywords: &[Keyword], block_type: BlockType) -> Result<CommandLine, String> {
+    pub fn attempt_parse(mut line: String, keywords: &[Keyword], block_type: BlockType, vars: &mut VarMap) -> Result<CommandLine, String> {
         line = line.trim_end_matches(';').to_string();
         let parts: Vec<&str> = line.split_ascii_whitespace().collect();
 
@@ -116,8 +139,10 @@ impl Keyword {
                 if keyword.allowed_in.contains(&block_type) {
                     let mut params = Vec::new();
 
-                    match (keyword.parser)(line) {
+                    match (keyword.parser)(line, vars) {
                         ParseResult::One(s) => params.push(s),
+                        ParseResult::Many(v) => params.extend(v),
+                        ParseResult::ParseError(e) => return Err(e),
                     }
 
                     return Ok(CommandLine::new((*keyword).clone(), params));

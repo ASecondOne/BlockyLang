@@ -3,10 +3,11 @@ use std::process::exit;
 
 use colored::Colorize;
 
-use blocky_lang::{execute_blocks, execution_policy::ExecutionPolicy, parse_blocks::attempt_parse};
+use blocky_lang::{execute_blocks, execution_policy::ExecutionPolicy, parse_blocks::attempt_parse, var_handler::VarMap};
 
 fn main() {
     let mut policy = ExecutionPolicy::new();
+    let mut vars = VarMap::new();
 
     let lines = read_to_string("./blocky_src/main.block").unwrap();
 
@@ -19,6 +20,6 @@ fn main() {
     };
 
     for cmdl in cmdls {
-        execute_blocks::parse_execute_block(cmdl);
+        execute_blocks::parse_execute_block(cmdl, &mut vars);
     }
 }

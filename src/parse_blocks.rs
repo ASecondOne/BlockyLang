@@ -1,5 +1,5 @@
 use crate::{
-    execution_policy::ExecutionPolicy, parse_lines::{Block, BlockType, Keyword},
+    execution_policy::ExecutionPolicy, parse_lines::{Block, BlockType, Keyword}, var_handler::VarMap,
 };
 
 pub struct CodeBlock {
@@ -27,8 +27,8 @@ impl CommandLine {
         CommandLine { keyword, params }
     }
 
-    pub fn execute(&mut self) {
-        let _exit_code = (self.keyword.runner)(&self.params);
+    pub fn execute(&mut self, vars: &mut VarMap) -> i32 {
+        (self.keyword.runner)(&self.params, vars)
     }
 }
 
