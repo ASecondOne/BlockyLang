@@ -88,23 +88,28 @@ impl Keyword {
 
                 1
             }),
-            parser: Arc::new(|a: String, _vars: &mut VarMap| {
-                if let (Some(start), Some(end)) = (a.find('"'), a.rfind('"')) {
-                    let inside = &a[start + 1..end];
+            parser: Arc::new(|a: String, vars: &mut VarMap| {
+                let a = a.strip_prefix("print").unwrap().trim();
+
+                if let Some(inside) = a.strip_prefix('"').and_then(|s| s.strip_suffix('"')) {
                     return ParseResult::One(inside.to_string());
                 }
 
-                ParseResult::One("".to_string())
+                if let Some(value) = vars.get_var(a.to_string()) {
+                    return ParseResult::One(value.to_string());
+                }
+
+                ParseResult::ParseError(format!("Could not parse print value: {a}"))
             }),
             allowed_in: vec![BlockType::Execute]
         });
 
         out.push(Keyword { 
             definition: "let".to_string(), 
-            runner: Arc::new(|a: &[String], _vars: &mut VarMap| {
+            runner: Arc::new(|a: &[String], vars: &mut VarMap| {
                 
                 if let [name, value, ..] = a {
-                    
+                    vars.add_new(name.to_string(), value.to_string());
                 }
 
                 1
