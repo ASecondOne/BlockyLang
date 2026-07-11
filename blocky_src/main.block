@@ -8,7 +8,7 @@
 </define>
 
 <execute>
-    print num + 1;
+    print 1.01 + 1.01;
     
     print "Hello World 2";
 </execute>

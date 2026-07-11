@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{execution_policy::ExecutionPolicy, parse_blocks::CommandLine, var_handler::{VarMap, VarType, parse_type}};
+use crate::{alu::attempt_calculator_parse, execution_policy::ExecutionPolicy, parse_blocks::CommandLine, var_handler::{VarMap, VarType, parse_type}};
 
 enum ParseResult {
     One(String),
@@ -97,6 +97,11 @@ impl Keyword {
 
                 if let Some(value) = vars.get_var(a.to_string()) {
                     return ParseResult::One(value.to_string());
+                }
+
+                match attempt_calculator_parse(a.to_string(), vars) {
+                    crate::alu::Expression::Error(a) => return ParseResult::ParseError(format!("{a}")),
+                    _ => {}
                 }
 
                 
