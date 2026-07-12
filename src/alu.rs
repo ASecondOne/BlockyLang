@@ -1,4 +1,4 @@
-use crate::{alu::Expression::{Add, Multiply, Number}, var_handler::VarMap};
+use crate::{alu::Expression::{Add, Divide, Multiply, Number}, var_handler::VarMap};
 
 #[derive(Debug, PartialEq)]
 pub enum Expression {
@@ -37,7 +37,7 @@ pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
             }
         }
 
-        if vec!['+', '-', '*'].contains(&char) {
+        if vec!['+', '-', '*', '/'].contains(&char) {
             pending_operator = Some(char);
         }
 
@@ -75,6 +75,31 @@ pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
                                     current_expression = Some(Expression::Subtract(
                                         left,
                                         Box::new(Expression::Multiply(
+                                            right,
+                                            Box::new(second_num),
+                                        )),
+                                    ));
+                                }
+                                _ => {}
+                            }
+                        } else if pending_operator.unwrap() == '/' {
+                            match last_expression {
+                                last_expression @ Number(_) => {
+                                    current_expression = Some(Expression::Divide(Box::new(last_expression), Box::new(second_num)))
+                                }
+                                Add(left, right) => {
+                                    current_expression = Some(
+                                        Add(left, Box::new(
+                                            Divide(right, Box::new(
+                                                second_num
+                                            ))
+                                        ))
+                                    );
+                                },
+                                Expression::Subtract(left, right) => {
+                                    current_expression = Some(Expression::Subtract(
+                                        left,
+                                        Box::new(Expression::Divide(
                                             right,
                                             Box::new(second_num),
                                         )),
