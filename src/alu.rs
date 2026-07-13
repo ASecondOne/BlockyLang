@@ -1,4 +1,4 @@
-use crate::{alu::Expression::{Add, Divide, Multiply, Number}, var_handler::VarMap};
+use crate::{alu::Expression::{Add, Divide, Multiply, Number, Subtract}, var_handler::VarMap};
 
 #[derive(Debug, PartialEq)]
 pub enum Expression {
@@ -22,7 +22,7 @@ pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
     let mut first = true;
 
     for char in chars {
-        if first {
+        if first && pending_operator.is_none() {
             if char.is_numeric() || char == '.' {
                 possible_number.push(char);
             } else if !possible_number.is_empty() {
@@ -35,10 +35,6 @@ pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
 
                 possible_number.clear();
             }
-        }
-
-        if vec!['+', '-', '*', '/'].contains(&char) {
-            pending_operator = Some(char);
         }
 
         if pending_operator.is_some() {
@@ -71,13 +67,19 @@ pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
                                         ))
                                     );
                                 },
-                                Expression::Subtract(left, right) => {
+                                Subtract(left, right) => {
                                     current_expression = Some(Expression::Subtract(
                                         left,
                                         Box::new(Expression::Multiply(
                                             right,
                                             Box::new(second_num),
                                         )),
+                                    ));
+                                },
+                                last_expression @ Multiply(_, _) | last_expression @ Divide(_, _) => {
+                                    current_expression = Some(Expression::Multiply(
+                                        Box::new(last_expression),
+                                        Box::new(second_num),
                                     ));
                                 }
                                 _ => {}
@@ -96,13 +98,19 @@ pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
                                         ))
                                     );
                                 },
-                                Expression::Subtract(left, right) => {
+                                Subtract(left, right) => {
                                     current_expression = Some(Expression::Subtract(
                                         left,
                                         Box::new(Expression::Divide(
                                             right,
                                             Box::new(second_num),
                                         )),
+                                    ));
+                                }
+                                last_expression @ Multiply(_, _) | last_expression @ Divide(_, _) => {
+                                    current_expression = Some(Expression::Divide(
+                                        Box::new(last_expression),
+                                        Box::new(second_num),
                                     ));
                                 }
                                 _ => {}
@@ -116,109 +124,178 @@ pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
             }
         }
 
+        if vec!['+', '-', '*', '/'].contains(&char) {
+            pending_operator = Some(char);
+        }
     }
 
-    return current_expression.unwrap();
+    if current_expression.is_some() {
+        return current_expression.unwrap();
+    }
 
     Expression::Error(format!("Could not calculator parse: {}", to_parse).to_string())
 }
 
 #[test]
-fn test_simple_addition() {
+fn test_simple_division() {
     let vars = VarMap::new();
 
-    let result = attempt_calculator_parse("1.01 + 1.01".to_string(), &vars);
-
-    println!("{result:#?}");
+    let result = attempt_calculator_parse("8 / 2".to_string(), &vars);
 
     assert_eq!(
         result,
-        Expression::Add(
-            Box::new(Expression::Number(1.01)),
-            Box::new(Expression::Number(1.01)),
+        Expression::Divide(
+            Box::new(Expression::Number(8.0)),
+            Box::new(Expression::Number(2.0)),
         )
     );
 }
 
 #[test]
-fn test_three_number_addition() {
+fn test_multiple_multiplications() {
     let vars = VarMap::new();
 
-    let result = attempt_calculator_parse(
-        "1.01 + 1.01 + 1.01".to_string(),
-        &vars,
-    );
-
-    println!("{result:#?}");
+    let result = attempt_calculator_parse("2 * 3 * 4".to_string(), &vars);
 
     assert_eq!(
         result,
-        Expression::Add(
-            Box::new(Expression::Add(
-                Box::new(Expression::Number(1.01)),
-                Box::new(Expression::Number(1.01)),
-            )),
-            Box::new(Expression::Number(1.01)),
-        )
-    );
-}
-
-#[test]
-fn test_addition_and_subtraction() {
-    let vars = VarMap::new();
-
-    let result = attempt_calculator_parse(
-        "1 + 2 - 3".to_string(),
-        &vars,
-    );
-
-    println!("{result:#?}");
-
-    assert_eq!(
-        result,
-        Expression::Subtract(
-            Box::new(Expression::Add(
-                Box::new(Expression::Number(1.0)),
+        Expression::Multiply(
+            Box::new(Expression::Multiply(
                 Box::new(Expression::Number(2.0)),
+                Box::new(Expression::Number(3.0)),
             )),
-            Box::new(Expression::Number(3.0)),
+            Box::new(Expression::Number(4.0)),
         )
     );
 }
 
 #[test]
-fn test_multiplication_precedence() {
+fn test_multiple_divisions() {
     let vars = VarMap::new();
 
-    let result = attempt_calculator_parse(
-        "1 + 2 * 3".to_string(),
-        &vars,
-    );
+    let result = attempt_calculator_parse("16 / 4 / 2".to_string(), &vars);
 
-    println!("{result:#?}");
+    assert_eq!(
+        result,
+        Expression::Divide(
+            Box::new(Expression::Divide(
+                Box::new(Expression::Number(16.0)),
+                Box::new(Expression::Number(4.0)),
+            )),
+            Box::new(Expression::Number(2.0)),
+        )
+    );
+}
+
+#[test]
+fn test_multiplication_then_division() {
+    let vars = VarMap::new();
+
+    let result = attempt_calculator_parse("2 * 3 / 4".to_string(), &vars);
+
+    assert_eq!(
+        result,
+        Expression::Divide(
+            Box::new(Expression::Multiply(
+                Box::new(Expression::Number(2.0)),
+                Box::new(Expression::Number(3.0)),
+            )),
+            Box::new(Expression::Number(4.0)),
+        )
+    );
+}
+
+#[test]
+fn test_division_then_multiplication() {
+    let vars = VarMap::new();
+
+    let result = attempt_calculator_parse("8 / 4 * 2".to_string(), &vars);
+
+    assert_eq!(
+        result,
+        Expression::Multiply(
+            Box::new(Expression::Divide(
+                Box::new(Expression::Number(8.0)),
+                Box::new(Expression::Number(4.0)),
+            )),
+            Box::new(Expression::Number(2.0)),
+        )
+    );
+}
+
+#[test]
+fn test_division_precedence() {
+    let vars = VarMap::new();
+
+    let result = attempt_calculator_parse("1 + 8 / 4".to_string(), &vars);
 
     assert_eq!(
         result,
         Expression::Add(
             Box::new(Expression::Number(1.0)),
-            Box::new(Expression::Multiply(
-                Box::new(Expression::Number(2.0)),
-                Box::new(Expression::Number(3.0)),
+            Box::new(Expression::Divide(
+                Box::new(Expression::Number(8.0)),
+                Box::new(Expression::Number(4.0)),
             )),
         )
     );
 }
 
 #[test]
-fn test_long_mixed_expression() {
+fn test_multiple_high_precedence_expressions() {
+    let vars = VarMap::new();
+
+    let result =
+        attempt_calculator_parse("2 * 3 + 8 / 4".to_string(), &vars);
+
+    assert_eq!(
+        result,
+        Expression::Add(
+            Box::new(Expression::Multiply(
+                Box::new(Expression::Number(2.0)),
+                Box::new(Expression::Number(3.0)),
+            )),
+            Box::new(Expression::Divide(
+                Box::new(Expression::Number(8.0)),
+                Box::new(Expression::Number(4.0)),
+            )),
+        )
+    );
+}
+
+#[test]
+fn test_long_multiplication_and_division_chain() {
+    let vars = VarMap::new();
+
+    let result =
+        attempt_calculator_parse("2 * 3 / 4 * 5 / 6".to_string(), &vars);
+
+    assert_eq!(
+        result,
+        Expression::Divide(
+            Box::new(Expression::Multiply(
+                Box::new(Expression::Divide(
+                    Box::new(Expression::Multiply(
+                        Box::new(Expression::Number(2.0)),
+                        Box::new(Expression::Number(3.0)),
+                    )),
+                    Box::new(Expression::Number(4.0)),
+                )),
+                Box::new(Expression::Number(5.0)),
+            )),
+            Box::new(Expression::Number(6.0)),
+        )
+    );
+}
+
+#[test]
+fn test_all_operators_and_precedence() {
     let vars = VarMap::new();
 
     let result = attempt_calculator_parse(
-        "1 + 2 * 3 - 4 * 5 + 6".to_string(),
+        "1 + 2 * 3 - 8 / 4 + 5 * 6 / 3".to_string(),
         &vars,
     );
-
-    println!("{result:#?}");
 
     assert_eq!(
         result,
@@ -231,12 +308,42 @@ fn test_long_mixed_expression() {
                         Box::new(Expression::Number(3.0)),
                     )),
                 )),
-                Box::new(Expression::Multiply(
+                Box::new(Expression::Divide(
+                    Box::new(Expression::Number(8.0)),
                     Box::new(Expression::Number(4.0)),
-                    Box::new(Expression::Number(5.0)),
                 )),
             )),
-            Box::new(Expression::Number(6.0)),
+            Box::new(Expression::Divide(
+                Box::new(Expression::Multiply(
+                    Box::new(Expression::Number(5.0)),
+                    Box::new(Expression::Number(6.0)),
+                )),
+                Box::new(Expression::Number(3.0)),
+            )),
+        )
+    );
+}
+
+#[test]
+fn test_expression_without_spaces() {
+    let vars = VarMap::new();
+
+    let result = attempt_calculator_parse("1+2*3/4-5".to_string(), &vars);
+
+    assert_eq!(
+        result,
+        Expression::Subtract(
+            Box::new(Expression::Add(
+                Box::new(Expression::Number(1.0)),
+                Box::new(Expression::Divide(
+                    Box::new(Expression::Multiply(
+                        Box::new(Expression::Number(2.0)),
+                        Box::new(Expression::Number(3.0)),
+                    )),
+                    Box::new(Expression::Number(4.0)),
+                )),
+            )),
+            Box::new(Expression::Number(5.0)),
         )
     );
 }
