@@ -9,6 +9,9 @@
 
 <execute>
     print 1.01 / 10;
+    println "";
+
+    println "hehe";
     
     print "Hello World 2";
 </execute>

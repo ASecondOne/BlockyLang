@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{io::{self, Write}, sync::Arc};
 
 use colored::Colorize;
 
@@ -87,17 +87,20 @@ impl Keyword {
                 if let Some(exp) = b {
                     match attempt_calculator_run(exp) {
                         Ok(v) => {
-                            println!("{v}");
+                            print!("{v}");
+                            io::stdout().flush().unwrap();
                             return 0;
                         },
                         Err(e) => {
-                            println!("{}", e.as_str().red());
+                            print!("{}", e.as_str().red());
+                            io::stdout().flush().unwrap();
                             return 1;
                         }
                     }
                 }
                 if let Some(first) = a.first() {
-                    println!("{first}");
+                    print!("{first}");
+                    io::stdout().flush().unwrap();
                     return 0;
                 }
 
@@ -105,6 +108,54 @@ impl Keyword {
             }),
             parser: Arc::new(|a: String, vars: &mut VarMap| {
                 let a = a.strip_prefix("print").unwrap().trim();
+
+                if let Some(inside) = a.strip_prefix('"').and_then(|s| s.strip_suffix('"')) {
+                    return ParseResult::One(inside.to_string());
+                }
+
+                if let Some(value) = vars.get_var(a.to_string()) {
+                    return ParseResult::One(value.to_string());
+                }
+
+                let expression = attempt_calculator_parse(a.to_string(), vars);
+
+                if matches!(&expression, Expression::Error(_)) {
+                    return ParseResult::ParseError(format!("{a}"));
+                } else {
+                    return ParseResult::OneAlu(expression);
+                }
+
+                ParseResult::ParseError(format!("Could not parse print value: {a}"))
+            }),
+            allowed_in: vec![BlockType::Execute]
+        });
+
+        out.push(Keyword {
+            definition: "println".to_string(),
+            runner: Arc::new(|(a, b): (&[String], &Option<Expression>), _vars: &mut VarMap| {
+                if let Some(exp) = b {
+                    match attempt_calculator_run(exp) {
+                        Ok(v) => {
+                            println!("{v}");
+                            return 0;
+                        },
+                        Err(e) => {
+                            println!("{}", e.as_str().red());
+                            io::stdout().flush().unwrap();
+                            return 1;
+                        }
+                    }
+                }
+                if let Some(first) = a.first() {
+                    println!("{first}");
+                    io::stdout().flush().unwrap();
+                    return 0;
+                }
+
+                1
+            }),
+            parser: Arc::new(|a: String, vars: &mut VarMap| {
+                let a = a.strip_prefix("println").unwrap().trim();
 
                 if let Some(inside) = a.strip_prefix('"').and_then(|s| s.strip_suffix('"')) {
                     return ParseResult::One(inside.to_string());
