@@ -1,5 +1,5 @@
 use crate::{
-    execution_policy::ExecutionPolicy, parse_lines::{Block, BlockType, Keyword}, var_handler::VarMap,
+    alu::Expression, execution_policy::ExecutionPolicy, parse_lines::{Block, BlockType, Keyword}, var_handler::VarMap,
 };
 
 pub struct CodeBlock {
@@ -19,16 +19,16 @@ impl CodeBlock {
 
 pub struct CommandLine {
     keyword: Keyword,
-    params: Vec<String>,
+    params: (Vec<String>, Option<Expression>),
 }
 
 impl CommandLine {
-    pub fn new(keyword: Keyword, params: Vec<String>) -> Self {
+    pub fn new(keyword: Keyword, params: (Vec<String>, Option<Expression>)) -> Self {
         CommandLine { keyword, params }
     }
 
     pub fn execute(&mut self, vars: &mut VarMap) -> i32 {
-        (self.keyword.runner)(&self.params, vars)
+        (self.keyword.runner)((&self.params.0, &self.params.1), vars)
     }
 }
 

@@ -26,8 +26,6 @@ pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
             if char.is_numeric() || char == '.' {
                 possible_number.push(char);
             } else if !possible_number.is_empty() {
-                println!("{possible_number}");
-
                 match possible_number.parse::<f64>() {
                     Ok(number) => current_expression = Some(Expression::Number(number)),
                     Err(_) => return Expression::Error(format!("Error while parsing {possible_number}").to_string())
@@ -42,8 +40,6 @@ pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
             if char.is_numeric() || char == '.' {
                 possible_number.push(char);
             } else if !possible_number.is_empty() {
-                println!("{possible_number}");
-
                 match possible_number.parse::<f64>() {
                     Ok(number) => {
                         let last_expression = current_expression.take().unwrap();
@@ -134,6 +130,37 @@ pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
     }
 
     Expression::Error(format!("Could not calculator parse: {}", to_parse).to_string())
+}
+
+pub fn attempt_calculator_run(exp: &Expression) -> Result<f64, String> {
+    match exp {
+        Expression::Error(error) => Err(error.clone()),
+
+        Expression::Number(number) => Ok(*number),
+
+        Expression::Add(left, right) => {
+            Ok(attempt_calculator_run(left)? + attempt_calculator_run(right)?)
+        }
+
+        Expression::Subtract(left, right) => {
+            Ok(attempt_calculator_run(left)? - attempt_calculator_run(right)?)
+        }
+
+        Expression::Multiply(left, right) => {
+            Ok(attempt_calculator_run(left)? * attempt_calculator_run(right)?)
+        }
+
+        Expression::Divide(left, right) => {
+            let left = attempt_calculator_run(left)?;
+            let right = attempt_calculator_run(right)?;
+
+            if right == 0.0 {
+                return Err("Cannot divide by zero".to_string());
+            }
+
+            Ok(left / right)
+        }
+    }
 }
 
 #[test]

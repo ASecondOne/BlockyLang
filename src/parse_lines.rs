@@ -1,11 +1,14 @@
 use std::sync::Arc;
 
-use crate::{alu::attempt_calculator_parse, execution_policy::ExecutionPolicy, parse_blocks::CommandLine, var_handler::{VarMap, VarType, parse_type}};
+use colored::Colorize;
+
+use crate::{alu::{Expression, attempt_calculator_parse, attempt_calculator_run}, execution_policy::ExecutionPolicy, parse_blocks::CommandLine, var_handler::{VarMap, VarType, parse_type}};
 
 enum ParseResult {
     One(String),
     Many(Vec<String>),
     ParseError(String),
+    OneAlu(Expression),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -69,7 +72,7 @@ impl Block {
 #[derive(Clone)]
 pub struct Keyword {
     pub definition: String,
-    pub runner: Arc<dyn Fn(&[String], &mut VarMap) -> i32>,
+    pub runner: Arc<dyn Fn((&[String], &Option<Expression>), &mut VarMap) -> i32>,
     parser: Arc<dyn Fn(String, &mut VarMap) -> ParseResult>,
     pub allowed_in: Vec<BlockType>,
 }
@@ -80,7 +83,19 @@ impl Keyword {
 
         out.push(Keyword {
             definition: "print".to_string(),
-            runner: Arc::new(|a: &[String], _vars: &mut VarMap| {
+            runner: Arc::new(|(a, b): (&[String], &Option<Expression>), _vars: &mut VarMap| {
+                if let Some(exp) = b {
+                    match attempt_calculator_run(exp) {
+                        Ok(v) => {
+                            println!("{v}");
+                            return 0;
+                        },
+                        Err(e) => {
+                            println!("{}", e.as_str().red());
+                            return 1;
+                        }
+                    }
+                }
                 if let Some(first) = a.first() {
                     println!("{first}");
                     return 0;
@@ -99,12 +114,13 @@ impl Keyword {
                     return ParseResult::One(value.to_string());
                 }
 
-                match attempt_calculator_parse(a.to_string(), vars) {
-                    crate::alu::Expression::Error(a) => return ParseResult::ParseError(format!("{a}")),
-                    _ => {}
-                }
+                let expression = attempt_calculator_parse(a.to_string(), vars);
 
-                
+                if matches!(&expression, Expression::Error(_)) {
+                    return ParseResult::ParseError(format!("{a}"));
+                } else {
+                    return ParseResult::OneAlu(expression);
+                }
 
                 ParseResult::ParseError(format!("Could not parse print value: {a}"))
             }),
@@ -113,7 +129,9 @@ impl Keyword {
 
         out.push(Keyword { 
             definition: "let".to_string(), 
-            runner: Arc::new(|a: &[String], vars: &mut VarMap| {
+            runner: Arc::new(|(a, b): (&[String], &Option<Expression>), vars: &mut VarMap| {
+
+                
                 
                 if let [name, value, ..] = a {
                     vars.add_new(name.to_string(), value.to_string());
@@ -149,11 +167,18 @@ impl Keyword {
         if let Some(first) = parts.first() {
             if let Some(keyword) = keywords.iter().find(|k| k.definition == *first) {
                 if keyword.allowed_in.contains(&block_type) {
-                    let mut params = Vec::new();
+                    let mut params: (Vec<String>, Option<Expression>) = (Vec::new(), None);
 
                     match (keyword.parser)(line, vars) {
-                        ParseResult::One(s) => params.push(s),
-                        ParseResult::Many(v) => params.extend(v),
+                        ParseResult::One(s) => {
+                            params.0.push(s);
+                        }
+                        ParseResult::Many(v) => {
+                            params.0.extend(v);
+                        }
+                        ParseResult::OneAlu(exp) => {
+                            params.1 = Some(exp);
+                        }
                         ParseResult::ParseError(e) => return Err(e),
                     }
 
