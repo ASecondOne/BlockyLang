@@ -83,9 +83,9 @@ impl Keyword {
 
         out.push(Keyword {
             definition: "print".to_string(),
-            runner: Arc::new(|(a, b): (&[String], &Option<Expression>), _vars: &mut VarMap| {
+            runner: Arc::new(|(a, b): (&[String], &Option<Expression>), vars: &mut VarMap| {
                 if let Some(exp) = b {
-                    match attempt_calculator_run(exp) {
+                    match attempt_calculator_run(exp, vars) {
                         Ok(v) => {
                             print!("{v}");
                             io::stdout().flush().unwrap();
@@ -132,9 +132,9 @@ impl Keyword {
 
         out.push(Keyword {
             definition: "println".to_string(),
-            runner: Arc::new(|(a, b): (&[String], &Option<Expression>), _vars: &mut VarMap| {
+            runner: Arc::new(|(a, b): (&[String], &Option<Expression>), vars: &mut VarMap| {
                 if let Some(exp) = b {
-                    match attempt_calculator_run(exp) {
+                    match attempt_calculator_run(exp, vars) {
                         Ok(v) => {
                             println!("{v}");
                             return 0;

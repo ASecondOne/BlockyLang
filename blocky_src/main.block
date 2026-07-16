@@ -8,7 +8,7 @@
 </define>
 
 <execute>
-    print 1.01 / 10;
+    print num / 10;
     println "";
 
     println "hehe";

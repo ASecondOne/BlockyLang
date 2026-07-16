@@ -22,4 +22,6 @@ fn main() {
     for cmdl in cmdls {
         execute_blocks::parse_execute_block(cmdl, &mut vars);
     }
+
+    println!("");
 }

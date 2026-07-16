@@ -56,6 +56,10 @@ impl VarMap {
 
         None
     }
+
+    pub fn var_exists(&self, name: &String) -> bool {
+        self.vars.contains_key(name)
+    }
 }
 
 pub fn parse_type(value: &str) -> VarType {

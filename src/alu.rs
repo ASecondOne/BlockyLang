@@ -1,9 +1,10 @@
-use crate::{alu::Expression::{Add, Divide, Multiply, Number, Subtract}, var_handler::VarMap};
+use crate::{alu::Expression::{Add, Divide, Multiply, Number, Subtract, Variable}, var_handler::VarMap};
 
 #[derive(Debug, PartialEq)]
 pub enum Expression {
     Error(String),
     Number(f64),
+    Variable(String),
     Add(Box<Expression>, Box<Expression>),
     Subtract(Box<Expression>, Box<Expression>),
     Multiply(Box<Expression>, Box<Expression>),
@@ -15,6 +16,7 @@ pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
     chars.push('\0');
 
     let mut possible_number = String::new();
+    let mut possible_variable = String::new();
 
     let mut current_expression: Option<Expression> = None;
     let mut pending_operator: Option<char> = None;
@@ -32,6 +34,19 @@ pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
                 }
 
                 possible_number.clear();
+            }
+
+            if char.is_ascii_alphabetic()
+                || char == '_'
+                || (!possible_variable.is_empty() && char.is_ascii_digit())
+            {
+                possible_variable.push(char);
+            } else if !possible_variable.is_empty() {
+                if vars.var_exists(&possible_variable) {
+                    current_expression = Some(Expression::Variable(possible_variable.clone()))
+                }
+
+                possible_variable.clear();
             }
         }
 
@@ -51,7 +66,7 @@ pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
                             current_expression = Some(Expression::Subtract(Box::new(last_expression), Box::new(second_num)))
                         } else if pending_operator.unwrap() == '*' {
                             match last_expression {
-                                last_expression @ Number(_) => {
+                                last_expression @ (Number(_) | Variable(_)) => {
                                     current_expression = Some(Expression::Multiply(Box::new(last_expression), Box::new(second_num)))
                                 }
                                 Add(left, right) => {
@@ -82,7 +97,7 @@ pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
                             }
                         } else if pending_operator.unwrap() == '/' {
                             match last_expression {
-                                last_expression @ Number(_) => {
+                                last_expression @ (Number(_) | Variable(_)) => {
                                     current_expression = Some(Expression::Divide(Box::new(last_expression), Box::new(second_num)))
                                 }
                                 Add(left, right) => {
@@ -117,6 +132,90 @@ pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
                 }
 
                 possible_number.clear();
+                pending_operator = None;
+            }
+
+            if char.is_ascii_alphabetic()
+                || char == '_'
+                || (!possible_variable.is_empty() && char.is_ascii_digit())
+            {
+                possible_variable.push(char);
+            } else if !possible_variable.is_empty() {
+                if vars.var_exists(&possible_variable) {
+                    let last_expression = current_expression.take().unwrap();
+                        let second_num = Some(Expression::Variable(possible_variable.clone())).unwrap();
+
+                        if pending_operator.unwrap() == '+' {
+                            current_expression = Some(Expression::Add(Box::new(last_expression), Box::new(second_num)))
+                        } else if pending_operator.unwrap() == '-' {
+                            current_expression = Some(Expression::Subtract(Box::new(last_expression), Box::new(second_num)))
+                        } else if pending_operator.unwrap() == '*' {
+                            match last_expression {
+                                last_expression @ (Number(_) | Variable(_)) => {
+                                    current_expression = Some(Expression::Multiply(Box::new(last_expression), Box::new(second_num)))
+                                }
+                                Add(left, right) => {
+                                    current_expression = Some(
+                                        Add(left, Box::new(
+                                            Multiply(right, Box::new(
+                                                second_num
+                                            ))
+                                        ))
+                                    );
+                                },
+                                Subtract(left, right) => {
+                                    current_expression = Some(Expression::Subtract(
+                                        left,
+                                        Box::new(Expression::Multiply(
+                                            right,
+                                            Box::new(second_num),
+                                        )),
+                                    ));
+                                },
+                                last_expression @ Multiply(_, _) | last_expression @ Divide(_, _) => {
+                                    current_expression = Some(Expression::Multiply(
+                                        Box::new(last_expression),
+                                        Box::new(second_num),
+                                    ));
+                                }
+                                _ => {}
+                            }
+                        } else if pending_operator.unwrap() == '/' {
+                            match last_expression {
+                                last_expression @ (Number(_) | Variable(_)) => {
+                                    current_expression = Some(Expression::Divide(Box::new(last_expression), Box::new(second_num)))
+                                }
+                                Add(left, right) => {
+                                    current_expression = Some(
+                                        Add(left, Box::new(
+                                            Divide(right, Box::new(
+                                                second_num
+                                            ))
+                                        ))
+                                    );
+                                },
+                                Subtract(left, right) => {
+                                    current_expression = Some(Expression::Subtract(
+                                        left,
+                                        Box::new(Expression::Divide(
+                                            right,
+                                            Box::new(second_num),
+                                        )),
+                                    ));
+                                }
+                                last_expression @ Multiply(_, _) | last_expression @ Divide(_, _) => {
+                                    current_expression = Some(Expression::Divide(
+                                        Box::new(last_expression),
+                                        Box::new(second_num),
+                                    ));
+                                }
+                                _ => {}
+                            }
+                        }
+                }
+
+                possible_variable.clear();
+                pending_operator = None;
             }
         }
 
@@ -132,27 +231,38 @@ pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
     Expression::Error(format!("Could not calculator parse: {}", to_parse).to_string())
 }
 
-pub fn attempt_calculator_run(exp: &Expression) -> Result<f64, String> {
+pub fn attempt_calculator_run(exp: &Expression, vars: &VarMap) -> Result<f64, String> {
     match exp {
         Expression::Error(error) => Err(error.clone()),
 
         Expression::Number(number) => Ok(*number),
 
+        Expression::Variable(var) => {
+            if let Some(var) = vars.get_var(var.clone()) {
+                match var.parse::<f64>() {
+                    Ok(num) => return Ok(num),
+                    Err(_) => return Err("Error while parsing".to_string())
+                }
+            }
+
+            Err("SS".to_string())
+        }
+
         Expression::Add(left, right) => {
-            Ok(attempt_calculator_run(left)? + attempt_calculator_run(right)?)
+            Ok(attempt_calculator_run(left, vars)? + attempt_calculator_run(right, vars)?)
         }
 
         Expression::Subtract(left, right) => {
-            Ok(attempt_calculator_run(left)? - attempt_calculator_run(right)?)
+            Ok(attempt_calculator_run(left, vars)? - attempt_calculator_run(right, vars)?)
         }
 
         Expression::Multiply(left, right) => {
-            Ok(attempt_calculator_run(left)? * attempt_calculator_run(right)?)
+            Ok(attempt_calculator_run(left, vars)? * attempt_calculator_run(right, vars)?)
         }
 
         Expression::Divide(left, right) => {
-            let left = attempt_calculator_run(left)?;
-            let right = attempt_calculator_run(right)?;
+            let left = attempt_calculator_run(left, vars)?;
+            let right = attempt_calculator_run(right, vars)?;
 
             if right == 0.0 {
                 return Err("Cannot divide by zero".to_string());
