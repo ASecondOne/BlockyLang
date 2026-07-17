@@ -5,25 +5,9 @@
 <define>
     let num = 4.003;
     let string = "Hello";
+    let foo7 = 4;
 </define>
 
 <execute>
-    print num / 10;
-    println "";
-
-    println "hehe";
-    
-    print "Hello World 2";
+    println foo8 + 1;
 </execute>
-
-<execute>
-    print "Hello World 3";
-    
-    print "Hello World 4";
-</execute>
-
-<execute>
-    print "Hello World 5";
-    
-    print "Hello World 6";
-

@@ -8,7 +8,7 @@ pub enum VarType {
 #[derive(Clone)]
 struct Var {
     var_type: VarType,
-    value: (Option<String>, Option<f32>),
+    value: (Option<String>, Option<f64>),
 }
 
 #[derive(Clone)]
@@ -39,7 +39,7 @@ impl VarMap {
         let var_type = parse_type(&value);
 
         let value = match var_type {
-            VarType::Number => (None, Some(value.parse::<f32>().unwrap())),
+            VarType::Number => (None, Some(value.parse::<f64>().unwrap())),
             _ => (Some(value), None),
         };
 

@@ -2,7 +2,7 @@ use std::{io::{self, Write}, sync::Arc};
 
 use colored::Colorize;
 
-use crate::{alu::{Expression, attempt_calculator_parse, attempt_calculator_run}, execution_policy::ExecutionPolicy, parse_blocks::CommandLine, var_handler::{VarMap, VarType, parse_type}};
+use crate::{alu::{Expression, attempt_calculator_parse, attempt_calculator_run}, execution_policy::ExecutionPolicy, output_state, parse_blocks::CommandLine, var_handler::{VarMap, VarType, parse_type}};
 
 enum ParseResult {
     One(String),
@@ -89,10 +89,12 @@ impl Keyword {
                         Ok(v) => {
                             print!("{v}");
                             io::stdout().flush().unwrap();
+                            output_state::used_println();
                             return 0;
                         },
                         Err(e) => {
                             print!("{}", e.as_str().red());
+                            output_state::used_println();
                             io::stdout().flush().unwrap();
                             return 1;
                         }
@@ -117,13 +119,10 @@ impl Keyword {
                     return ParseResult::One(value.to_string());
                 }
 
-                let expression = attempt_calculator_parse(a.to_string(), vars);
-
-                if matches!(&expression, Expression::Error(_)) {
-                    return ParseResult::ParseError(format!("{a}"));
-                } else {
-                    return ParseResult::OneAlu(expression);
-                }
+                return match attempt_calculator_parse(a.to_string(), vars) {
+                    Expression::Error(error) => ParseResult::ParseError(error),
+                    expression => ParseResult::OneAlu(expression),
+                };
 
                 ParseResult::ParseError(format!("Could not parse print value: {a}"))
             }),
@@ -137,15 +136,18 @@ impl Keyword {
                     match attempt_calculator_run(exp, vars) {
                         Ok(v) => {
                             println!("{v}");
+                            output_state::used_println();
                             return 0;
                         },
                         Err(e) => {
                             println!("{}", e.as_str().red());
+                            output_state::used_println();
                             io::stdout().flush().unwrap();
                             return 1;
                         }
                     }
                 }
+
                 if let Some(first) = a.first() {
                     println!("{first}");
                     io::stdout().flush().unwrap();
@@ -165,13 +167,10 @@ impl Keyword {
                     return ParseResult::One(value.to_string());
                 }
 
-                let expression = attempt_calculator_parse(a.to_string(), vars);
-
-                if matches!(&expression, Expression::Error(_)) {
-                    return ParseResult::ParseError(format!("{a}"));
-                } else {
-                    return ParseResult::OneAlu(expression);
-                }
+                return match attempt_calculator_parse(a.to_string(), vars) {
+                    Expression::Error(error) => ParseResult::ParseError(error),
+                    expression => ParseResult::OneAlu(expression),
+                };
 
                 ParseResult::ParseError(format!("Could not parse print value: {a}"))
             }),
@@ -192,11 +191,24 @@ impl Keyword {
             }),
             parser: Arc::new(|a: String, _vars: &mut VarMap| {
 
-                let (name, value) = a
-                    .strip_prefix("let ")
-                    .and_then(|s| s.split_once('='))
-                    .map(|(n, v)| (n.trim(), v.trim()))
-                    .unwrap();
+                let Some(rest) = a.strip_prefix("let ") else {
+                    return ParseResult::ParseError("expected `let`".to_string());
+                };
+
+                let Some((name, value)) = rest.strip_suffix(';').unwrap_or(rest).split_once('=') else {
+                    return ParseResult::ParseError("missing `=`".to_string());
+                };
+
+                let name = name.trim();
+                let value = value.trim();
+
+                if name.is_empty() {
+                    return ParseResult::ParseError("missing variable name".to_string());
+                }
+
+                if value.is_empty() {
+                    return ParseResult::ParseError("missing variable value".to_string());
+                }
 
                 match parse_type(value) {
                     VarType::Unknown => return ParseResult::ParseError("Unknown Data Type".to_string()),

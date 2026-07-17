@@ -9,6 +9,8 @@ fn main() {
     let mut policy = ExecutionPolicy::new();
     let mut vars = VarMap::new();
 
+    let println_needed = false;
+
     let lines = read_to_string("./blocky_src/main.block").unwrap();
 
     let cmdls = match attempt_parse(lines, &mut policy) {
@@ -23,5 +25,11 @@ fn main() {
         execute_blocks::parse_execute_block(cmdl, &mut vars);
     }
 
-    println!("");
+    if println_needed {
+        println!("");
+    }
+}
+
+pub fn change_println(p: &mut bool, change_to: bool) {
+    *p = change_to;
 }
