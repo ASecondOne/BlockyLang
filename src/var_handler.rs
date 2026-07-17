@@ -7,13 +7,19 @@ pub enum VarType {
 
 #[derive(Clone)]
 struct Var {
-    var_type: VarType,
+    _var_type: VarType,
     value: (Option<String>, Option<f64>),
 }
 
 #[derive(Clone)]
 pub struct VarMap {
     vars: HashMap<String, Var>
+}
+
+impl Default for VarMap {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Var {
@@ -44,7 +50,7 @@ impl VarMap {
         };
 
         self.vars.insert(name, Var {
-            var_type,
+            _var_type: var_type,
             value,
         });
     }

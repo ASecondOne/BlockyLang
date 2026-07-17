@@ -13,7 +13,7 @@ impl CodeBlock {
     }
 
     pub fn get_block_type(&self) -> BlockType {
-        self.block_type.clone()
+        self.block_type
     }
 }
 
@@ -68,7 +68,7 @@ pub fn attempt_parse(raw: String, policy: &mut ExecutionPolicy) -> Result<Vec<Co
                 }
                 
                 code_blocks.push(CodeBlock { 
-                    inside: inside,
+                    inside,
                     block_type: code_block_type
                 });
             } else {

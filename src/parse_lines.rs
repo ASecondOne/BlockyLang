@@ -17,12 +17,12 @@ pub enum BlockType {
 }
 
 impl BlockType {
-    pub fn parse(s: &String) -> Self {
+    pub fn parse(s: &str) -> Self {
         match s[1..s.len() - 1].to_lowercase().as_str() {
-            "execute" => return Self::Execute,
-            "executionolicy" => return Self::ExecutionPolicy,
-            "define" => return Self::Define,
-            _ => return Self::Unknown
+            "execute" =>  Self::Execute,
+            "executionolicy" => Self::ExecutionPolicy,
+            "define" => Self::Define,
+            _ => Self::Unknown
         }
     }
 }
@@ -35,20 +35,20 @@ pub struct Block {
 
 impl Block {
     pub fn init() -> Vec<Self> {
-        let mut out = Vec::new();
-
-        out.push(Block {
-            definition: "<execute>".to_string(),
-            ep_special_handler: None,
-        });
-        out.push(Block {
-            definition: "<execution_policy>".to_string(),
-            ep_special_handler: Some(ExecutionPolicy::change_policy),
-        });
-        out.push(Block { 
-            definition: "<define>".to_string(), 
-            ep_special_handler: None 
-        });
+        let out = vec![
+            Block {
+                definition: "<execute>".to_string(),
+                ep_special_handler: None,
+            },
+            Block {
+                definition: "<execution_policy>".to_string(),
+                ep_special_handler: Some(ExecutionPolicy::change_policy),
+            },
+            Block { 
+                definition: "<define>".to_string(), 
+                ep_special_handler: None 
+            },
+        ];
 
         out
     }
@@ -89,12 +89,12 @@ impl Keyword {
                         Ok(v) => {
                             print!("{v}");
                             io::stdout().flush().unwrap();
-                            output_state::used_println();
+                            output_state::used_print();
                             return 0;
                         },
                         Err(e) => {
                             print!("{}", e.as_str().red());
-                            output_state::used_println();
+                            output_state::used_print();
                             io::stdout().flush().unwrap();
                             return 1;
                         }
@@ -119,12 +119,12 @@ impl Keyword {
                     return ParseResult::One(value.to_string());
                 }
 
-                return match attempt_calculator_parse(a.to_string(), vars) {
+                match attempt_calculator_parse(a.to_string(), vars) {
                     Expression::Error(error) => ParseResult::ParseError(error),
                     expression => ParseResult::OneAlu(expression),
-                };
+                }
 
-                ParseResult::ParseError(format!("Could not parse print value: {a}"))
+                // ParseResult::ParseError(format!("Could not parse print value: {a}"))
             }),
             allowed_in: vec![BlockType::Execute]
         });
@@ -167,24 +167,25 @@ impl Keyword {
                     return ParseResult::One(value.to_string());
                 }
 
-                return match attempt_calculator_parse(a.to_string(), vars) {
+                match attempt_calculator_parse(a.to_string(), vars) {
                     Expression::Error(error) => ParseResult::ParseError(error),
                     expression => ParseResult::OneAlu(expression),
-                };
+                }
 
-                ParseResult::ParseError(format!("Could not parse print value: {a}"))
+                // ParseResult::ParseError(format!("Could not parse print value: {a}"))
             }),
             allowed_in: vec![BlockType::Execute]
         });
 
         out.push(Keyword { 
             definition: "let".to_string(), 
-            runner: Arc::new(|(a, b): (&[String], &Option<Expression>), vars: &mut VarMap| {
+            runner: Arc::new(|(a, _b): (&[String], &Option<Expression>), vars: &mut VarMap| {
 
                 
                 
                 if let [name, value, ..] = a {
                     vars.add_new(name.to_string(), value.to_string());
+                    return 0;
                 }
 
                 1
@@ -210,9 +211,8 @@ impl Keyword {
                     return ParseResult::ParseError("missing variable value".to_string());
                 }
 
-                match parse_type(value) {
-                    VarType::Unknown => return ParseResult::ParseError("Unknown Data Type".to_string()),
-                    _ => {}
+                if let VarType::Unknown = parse_type(value) { 
+                    return ParseResult::ParseError("Unknown Data Type".to_string()) 
                 }
 
                 ParseResult::Many(vec![name.to_string(), value.to_string()])

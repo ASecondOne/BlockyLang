@@ -9,5 +9,8 @@
 </define>
 
 <execute>
-    println foo8 + 1;
+    println foo7 + 1;
 </execute>
+
+<execute>
+    println foo7 + 1;
