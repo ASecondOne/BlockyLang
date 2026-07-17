@@ -1,21 +1,4 @@
-use crate::{
-    alu::Expression, execution_policy::ExecutionPolicy, parse_lines::{Block, BlockType, Keyword}, var_handler::VarMap,
-};
-
-pub struct CodeBlock {
-    block_type: BlockType,
-    inside: String,
-}
-
-impl CodeBlock {
-    pub fn get_inside(&self) -> String {
-        self.inside.clone()
-    }
-
-    pub fn get_block_type(&self) -> BlockType {
-        self.block_type
-    }
-}
+use crate::{alu::Expression, blocks_handler::define_blocks::{Block, BlockType, CodeBlock}, execution_policy::ExecutionPolicy, parse_lines::Keyword, var_handler::VarMap};
 
 pub struct CommandLine {
     keyword: Keyword,
@@ -67,10 +50,7 @@ pub fn attempt_parse(raw: String, policy: &mut ExecutionPolicy) -> Result<Vec<Co
                     return Err(format!("Unknown BlockType: {}", start_quota.clone()));
                 }
                 
-                code_blocks.push(CodeBlock { 
-                    inside,
-                    block_type: code_block_type
-                });
+                code_blocks.push(CodeBlock::new(inside, code_block_type));
             } else {
                 if policy.should_halt_on_code_block_parse_error() {
                     return Err(format!(

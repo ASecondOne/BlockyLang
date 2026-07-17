@@ -2,70 +2,14 @@ use std::{io::{self, Write}, sync::Arc};
 
 use colored::Colorize;
 
-use crate::{alu::{Expression, attempt_calculator_parse, attempt_calculator_run}, execution_policy::ExecutionPolicy, output_state, parse_blocks::CommandLine, var_handler::{VarMap, VarType, parse_type}};
+use crate::{alu::{Expression, attempt_calculator_parse, attempt_calculator_run}, blocks_handler::define_blocks::BlockType, parse_blocks::CommandLine, utils::output_state, var_handler::{VarMap, VarType, parse_type}};
+
 
 enum ParseResult {
     One(String),
     Many(Vec<String>),
     ParseError(String),
     OneAlu(Expression),
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BlockType {
-    Execute, ExecutionPolicy, Define, Unknown
-}
-
-impl BlockType {
-    pub fn parse(s: &str) -> Self {
-        match s[1..s.len() - 1].to_lowercase().as_str() {
-            "execute" =>  Self::Execute,
-            "executionolicy" => Self::ExecutionPolicy,
-            "define" => Self::Define,
-            _ => Self::Unknown
-        }
-    }
-}
-
-// Standard escape quota </...>
-pub struct Block {
-    definition: String,
-    pub ep_special_handler: Option<fn(&mut ExecutionPolicy, String) -> Result<(), String>>,
-}
-
-impl Block {
-    pub fn init() -> Vec<Self> {
-        let out = vec![
-            Block {
-                definition: "<execute>".to_string(),
-                ep_special_handler: None,
-            },
-            Block {
-                definition: "<execution_policy>".to_string(),
-                ep_special_handler: Some(ExecutionPolicy::change_policy),
-            },
-            Block { 
-                definition: "<define>".to_string(), 
-                ep_special_handler: None 
-            },
-        ];
-
-        out
-    }
-
-    pub fn match_block(&self, quota: String) -> bool {
-        if self.definition == quota {
-            return true;
-        }
-
-        false
-    }
-
-    pub fn get_end_quota(&self) -> String {
-        let mut b = self.definition.clone();
-        b.insert(1, '/');
-        b
-    }
 }
 
 // escape Quota: ;

@@ -3,7 +3,7 @@ use std::process::exit;
 
 use colored::Colorize;
 
-use blocky_lang::{execute_blocks, execution_policy::ExecutionPolicy, output_state::take_newline_needed, parse_blocks::attempt_parse, var_handler::VarMap};
+use blocky_lang::{execute_blocks, execution_policy::ExecutionPolicy, parse_blocks::attempt_parse, utils::output_state::take_newline_needed, var_handler::VarMap};
 
 fn main() {
     let mut policy = ExecutionPolicy::new();

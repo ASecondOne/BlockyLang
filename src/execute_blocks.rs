@@ -2,7 +2,7 @@ use std::process::exit;
 
 use colored::Colorize;
 
-use crate::{parse_blocks::CodeBlock, parse_lines::Keyword, var_handler::VarMap};
+use crate::{blocks_handler::define_blocks::CodeBlock, parse_lines::Keyword, var_handler::VarMap};
 
 pub fn parse_execute_block(block: CodeBlock, vars: &mut VarMap) {
     let insides = block.get_inside();
