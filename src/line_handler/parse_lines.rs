@@ -1,4 +1,4 @@
-use crate::{alu::Expression, blocks_handler::define_blocks::{BlockType}, line_handler::define_lines::{Keyword, ParseResult}, var_handler::VarMap};
+use crate::{alu::Expression, blocks_handler::define_blocks::BlockType, line_handler::define_lines::{Keyword, ParseResult}, utils::runtime_error::RuntimeError, var_handler::VarMap};
 
 pub struct CommandLine {
     keyword: Keyword,
@@ -10,7 +10,7 @@ impl CommandLine {
         CommandLine { keyword, params }
     }
 
-    pub fn execute(&mut self, vars: &mut VarMap) -> i32 {
+    pub fn execute(&mut self, vars: &mut VarMap) -> Result<(), RuntimeError> {
         (self.keyword.runner)((&self.params.0, &self.params.1), vars)
     }
 

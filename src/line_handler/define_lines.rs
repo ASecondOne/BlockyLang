@@ -1,8 +1,6 @@
 use std::{io::{self, Write}, sync::Arc};
 
-use colored::Colorize;
-
-use crate::{alu::{Expression, attempt_calculator_parse, attempt_calculator_run}, blocks_handler::define_blocks::BlockType, utils::output_state, var_handler::{VarMap, VarType, parse_type}};
+use crate::{alu::{Expression, attempt_calculator_parse, attempt_calculator_run}, blocks_handler::define_blocks::BlockType, utils::{output_state, runtime_error::RuntimeError}, var_handler::{VarMap, parse_type}};
 
 pub enum ParseResult {
     One(String),
@@ -11,11 +9,14 @@ pub enum ParseResult {
     OneAlu(Expression),
 }
 
+type RunnerType = Arc<dyn Fn((&[String], &Option<Expression>), &mut VarMap) -> Result<(), RuntimeError>>;
+type ParserType = Arc<dyn Fn(String, &mut VarMap) -> ParseResult>;
+
 #[derive(Clone)]
 pub struct Keyword {
     pub definition: String,
-    pub runner: Arc<dyn Fn((&[String], &Option<Expression>), &mut VarMap) -> i32>,
-    pub parser: Arc<dyn Fn(String, &mut VarMap) -> ParseResult>,
+    pub runner: RunnerType,
+    pub parser: ParserType,
     pub allowed_in: Vec<BlockType>,
 }
 
@@ -32,23 +33,21 @@ impl Keyword {
                             print!("{v}");
                             io::stdout().flush().unwrap();
                             output_state::used_print();
-                            return 0;
+                            return Ok(());
                         },
                         Err(e) => {
-                            print!("{}", e.as_str().red());
-                            output_state::used_print();
-                            io::stdout().flush().unwrap();
-                            return 1;
+                            return Err(RuntimeError::new(e));
                         }
                     }
                 }
                 if let Some(first) = a.first() {
                     print!("{first}");
+                    output_state::used_print();
                     io::stdout().flush().unwrap();
-                    return 0;
+                    return Ok(());
                 }
 
-                1
+                Err(RuntimeError::new("An Unknown error accord ups".to_string()))
             }),
             parser: Arc::new(|a: String, vars: &mut VarMap| {
                 let a = a.strip_prefix("print").unwrap().trim();
@@ -65,8 +64,6 @@ impl Keyword {
                     Expression::Error(error) => ParseResult::ParseError(error),
                     expression => ParseResult::OneAlu(expression),
                 }
-
-                // ParseResult::ParseError(format!("Could not parse print value: {a}"))
             }),
             allowed_in: vec![BlockType::Execute]
         });
@@ -79,24 +76,22 @@ impl Keyword {
                         Ok(v) => {
                             println!("{v}");
                             output_state::used_println();
-                            return 0;
+                            return Ok(());
                         },
                         Err(e) => {
-                            println!("{}", e.as_str().red());
-                            output_state::used_println();
-                            io::stdout().flush().unwrap();
-                            return 1;
+                            return Err(RuntimeError::new(e));
                         }
                     }
                 }
 
                 if let Some(first) = a.first() {
+                    output_state::used_println();
                     println!("{first}");
                     io::stdout().flush().unwrap();
-                    return 0;
+                    return Ok(());
                 }
 
-                1
+                Err(RuntimeError::new("An Unknown error accord".to_string()))
             }),
             parser: Arc::new(|a: String, vars: &mut VarMap| {
                 let a = a.strip_prefix("println").unwrap().trim();
@@ -122,15 +117,14 @@ impl Keyword {
         out.push(Keyword { 
             definition: "let".to_string(), 
             runner: Arc::new(|(a, _b): (&[String], &Option<Expression>), vars: &mut VarMap| {
-
-                
-                
                 if let [name, value, ..] = a {
-                    vars.add_new(name.to_string(), value.to_string());
-                    return 0;
+                    match vars.add_new(name.to_string(), value.to_string()) {
+                        Ok(()) => return Ok(()),
+                        Err(e) => return Err(RuntimeError::new(e)),
+                    }
                 }
 
-                1
+                Err(RuntimeError::new("An Unknown Error accord".to_string()))
             }),
             parser: Arc::new(|a: String, _vars: &mut VarMap| {
 
@@ -153,8 +147,9 @@ impl Keyword {
                     return ParseResult::ParseError("missing variable value".to_string());
                 }
 
-                if let VarType::Unknown = parse_type(value) { 
-                    return ParseResult::ParseError("Unknown Data Type".to_string()) 
+                match parse_type(value) {
+                    Ok(_) => {},
+                    Err(msg) => return ParseResult::ParseError(msg)
                 }
 
                 ParseResult::Many(vec![name.to_string(), value.to_string()])

@@ -20,7 +20,13 @@ fn main() {
     };
 
     for cmdl in cmdls {
-        execute_blocks::parse_execute_block(cmdl, &mut vars);
+        match execute_blocks::parse_execute_block(cmdl, &mut vars) {
+            Ok(()) => {}
+            Err(re) => {
+                re.report();
+                exit(1)
+            }
+        };
     }
 
     if take_newline_needed() {

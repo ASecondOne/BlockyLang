@@ -1,5 +1,6 @@
 use crate::{blocks_handler::define_blocks::{Block, BlockType, CodeBlock}, execution_policy::ExecutionPolicy};
 
+#[allow(clippy::collapsible_else_if)]
 pub fn attempt_parse(raw: String, policy: &mut ExecutionPolicy) -> Result<Vec<CodeBlock>, String> {
     let blocks = Block::init();
     let lines: Vec<&str> = raw.lines().collect();

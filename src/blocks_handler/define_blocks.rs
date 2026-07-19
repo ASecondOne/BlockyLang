@@ -10,9 +10,11 @@ pub enum BlockType {
     Execute, ExecutionPolicy, Define, Unknown
 }
 
+type EpSpecialHandlerType = Option<fn(&mut ExecutionPolicy, String) -> Result<(), String>>;
+
 pub struct Block {
     definition: String,
-    pub ep_special_handler: Option<fn(&mut ExecutionPolicy, String) -> Result<(), String>>,
+    pub ep_special_handler: EpSpecialHandlerType,
 }
 
 impl CodeBlock {
@@ -36,7 +38,7 @@ impl BlockType {
     pub fn parse(s: &str) -> Self {
         match s[1..s.len() - 1].to_lowercase().as_str() {
             "execute" =>  Self::Execute,
-            "executionolicy" => Self::ExecutionPolicy,
+            "executionpolicy" => Self::ExecutionPolicy,
             "define" => Self::Define,
             _ => Self::Unknown
         }

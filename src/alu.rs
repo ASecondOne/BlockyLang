@@ -447,7 +447,7 @@ fn test_expression_without_spaces() {
 #[test]
 fn test_variable_with_digit_on_either_side() {
     let mut vars = VarMap::new();
-    vars.add_new("foo2".to_string(), "7".to_string());
+    let _ = vars.add_new("foo2".to_string(), "7".to_string());
 
     assert_eq!(
         attempt_calculator_parse("foo2 + 1".to_string(), &vars),
