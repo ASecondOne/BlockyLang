@@ -2,15 +2,13 @@ use std::process::exit;
 
 use colored::Colorize;
 
-use crate::{blocks_handler::define_blocks::CodeBlock, parse_lines::Keyword, var_handler::VarMap};
+use crate::{blocks_handler::define_blocks::CodeBlock, line_handler::parse_lines::CommandLine, var_handler::VarMap};
 
 pub fn parse_execute_block(block: CodeBlock, vars: &mut VarMap) {
     let insides = block.get_inside();
 
-    let keywords = Keyword::init();
-
     for line in insides.lines().map(str::trim).filter(|l| !l.is_empty()) {
-        let out = Keyword::attempt_parse(line.to_string(), &keywords, block.get_block_type(), vars);
+        let out = CommandLine::attempt_parse(line.to_string(), block.get_block_type(), vars);
 
         match out {
             Ok(mut o) => {

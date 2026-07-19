@@ -1,19 +1,4 @@
-use crate::{alu::Expression, blocks_handler::define_blocks::{Block, BlockType, CodeBlock}, execution_policy::ExecutionPolicy, parse_lines::Keyword, var_handler::VarMap};
-
-pub struct CommandLine {
-    keyword: Keyword,
-    params: (Vec<String>, Option<Expression>),
-}
-
-impl CommandLine {
-    pub fn new(keyword: Keyword, params: (Vec<String>, Option<Expression>)) -> Self {
-        CommandLine { keyword, params }
-    }
-
-    pub fn execute(&mut self, vars: &mut VarMap) -> i32 {
-        (self.keyword.runner)((&self.params.0, &self.params.1), vars)
-    }
-}
+use crate::{blocks_handler::define_blocks::{Block, BlockType, CodeBlock}, execution_policy::ExecutionPolicy};
 
 pub fn attempt_parse(raw: String, policy: &mut ExecutionPolicy) -> Result<Vec<CodeBlock>, String> {
     let blocks = Block::init();
