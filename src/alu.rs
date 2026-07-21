@@ -199,7 +199,7 @@ pub fn attempt_calculator_run(exp: &Expression, vars: &VarMap) -> Result<f64, St
     match exp {
         Expression::Error(error) => Err(error.clone()),
 
-        Expression::Number(number) => Ok(*number),
+        Expression::Number(number) => Ok(*number), 
 
         Expression::Variable(var) => {
             if let Some(var) = vars.get_var(var.clone()) {
