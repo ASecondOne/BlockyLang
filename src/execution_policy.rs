@@ -1,11 +1,20 @@
+use crate::{var_handler::{Value, parse_type}};
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum OnCodeBlockParseError {
     Skip,
     HaltProgram,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+enum HandleUndefinedValueAs {
+    HaltProgram,
+    Value(Value)
+}
+
 enum Property {
     OnCodeBlockParseError(OnCodeBlockParseError),
+    HandleUndefinedValueAs(HandleUndefinedValueAs),
 }
 
 impl Property {
@@ -23,6 +32,13 @@ impl Property {
                 )),
                 _ => Err(format!("Invalid value for OnCodeBlockParseError: {value}")),
             },
+            "HandleUndefinedValueAs" => match value {
+                "HaltProgram" => Ok(Property::HandleUndefinedValueAs(HandleUndefinedValueAs::HaltProgram)),
+                _ => match parse_type(value, false) {
+                    Ok(v) => Ok(Property::HandleUndefinedValueAs(HandleUndefinedValueAs::Value(v))),
+                    Err(_e) => Err(format!("Invalid value for HandleUndefinedValueAs: {value}"))
+                }
+            },
             _ => Err(format!("Unknown property: {name}")),
         }
     }
@@ -31,12 +47,14 @@ impl Property {
 #[derive(Clone)]
 pub struct ExecutionPolicy {
     on_code_block_parse_error: OnCodeBlockParseError,
+    handle_undefined_value_as: HandleUndefinedValueAs
 }
 
 impl Default for ExecutionPolicy {
     fn default() -> Self {
         Self {
             on_code_block_parse_error: OnCodeBlockParseError::HaltProgram,
+            handle_undefined_value_as: HandleUndefinedValueAs::HaltProgram,
         }
     }
 }
@@ -78,6 +96,9 @@ impl ExecutionPolicy {
         match property {
             Property::OnCodeBlockParseError(v) => {
                 self.on_code_block_parse_error = v;
+            },
+            Property::HandleUndefinedValueAs(v) => {
+                self.handle_undefined_value_as = v
             }
         }
     }

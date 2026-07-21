@@ -1,15 +1,19 @@
 <execution_policy>
     OnCodeBlockParseError = Skip
+    HandleUndefinedValueAs = 0
 </execution_policy>
 
 <define>
     let num = 4.003;
     let string = "Hello";
     let foo7 = 4;
+    let undefined a;
 </define>
 
 <execute>
-    println foo7 + 1;
+    println foo7;
+
+    println a;
 </execute>
 
 <execute>

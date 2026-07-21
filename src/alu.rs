@@ -202,7 +202,10 @@ pub fn attempt_calculator_run(exp: &Expression, vars: &VarMap) -> Result<f64, St
         Expression::Number(number) => Ok(*number), 
 
         Expression::Variable(var) => {
-            if let Some(var) = vars.get_var(var.clone()) {
+            if let Some((var, undefind)) = vars.get_var(var.clone()) {
+                if undefind {
+                    return Err("Cannot use an undefind value".to_string());
+                }
                 match var.parse::<f64>() {
                     Ok(num) => return Ok(num),
                     Err(_) => return Err("Error while parsing".to_string()),
@@ -447,7 +450,7 @@ fn test_expression_without_spaces() {
 #[test]
 fn test_variable_with_digit_on_either_side() {
     let mut vars = VarMap::new();
-    let _ = vars.add_new("foo2".to_string(), "7".to_string());
+    let _ = vars.add_new("foo2".to_string(), "7".to_string(), false);
 
     assert_eq!(
         attempt_calculator_parse("foo2 + 1".to_string(), &vars),

@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Value {
     String(String),
     Number(f64),
+    Undefined
 }
 
 #[derive(Clone)]
@@ -23,11 +24,16 @@ impl Default for VarMap {
 }
 
 impl Var {
-    fn as_string(&self) -> String {
+    fn as_string(&self) -> Option<String> {
         match &self.value {
-            Value::Number(n) => n.to_string(),
-            Value::String(s) => s.to_string(),
+            Value::Number(n) => Some(n.to_string()),
+            Value::String(s) => Some(s.to_string()),
+            Value::Undefined => None,
         }
+    }
+
+    fn get_value(&self) -> &Value {
+        return &self.value;
     }
 }
 
@@ -38,8 +44,8 @@ impl VarMap {
         }
     }
 
-    pub fn add_new(&mut self, name: String, value: String) -> Result<(), String> {
-        match parse_type(&value) {
+    pub fn add_new(&mut self, name: String, value: String, undefined: bool) -> Result<(), String> {
+        match parse_type(&value, undefined) {
             Ok(v) => {
                 self.vars.insert(name, Var { value: v });
                 Ok(())
@@ -48,9 +54,12 @@ impl VarMap {
         }
     }
 
-    pub fn get_var(&self, name: String) -> Option<String> {
+    pub fn get_var(&self, name: String) -> Option<(String, bool)> {
         if let Some(found) = self.vars.get(&name) {
-            return Some(found.as_string().clone());
+            return match found.get_value() {
+                Value::Undefined => Some(("".to_string(), true)),
+                _ => Some((found.as_string().unwrap(), false))
+            };
         }
 
         None
@@ -61,8 +70,12 @@ impl VarMap {
     }
 }
 
-pub fn parse_type(value: &str) -> Result<Value, String> {
+pub fn parse_type(value: &str, undefined: bool) -> Result<Value, String> {
     let value = value.trim();
+
+    if undefined {
+        return Ok(Value::Undefined);
+    }
 
     if value.starts_with('"') && value.ends_with('"') {
         if let Some(inner) = value
