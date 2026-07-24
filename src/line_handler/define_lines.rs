@@ -1,6 +1,6 @@
 use std::{io::{self, Write}, sync::Arc};
 
-use crate::{alu::{Expression, attempt_calculator_parse, attempt_calculator_run}, blocks_handler::define_blocks::BlockType, utils::{output_state, runtime_error::RuntimeError}, var_handler::{VarMap, parse_type}};
+use crate::{alu::{Expression, attempt_calculator_parse, attempt_calculator_run}, blocks_handler::define_blocks::BlockType, utils::{execution_policy::ExecutionPolicy, output_state, runtime_error::{ErrorType, RuntimeError}}, var_handler::{Value, VarMap, parse_type}};
 
 pub enum ParseResult {
     One(String),
@@ -9,7 +9,7 @@ pub enum ParseResult {
     OneAlu(Expression),
 }
 
-type RunnerType = Arc<dyn Fn((&[String], &Option<Expression>), &mut VarMap) -> Result<(), RuntimeError>>;
+type RunnerType = Arc<dyn Fn((&[String], &Option<Expression>), &mut VarMap, &ExecutionPolicy) -> Result<(), RuntimeError>>;
 type ParserType = Arc<dyn Fn(String, &mut VarMap) -> ParseResult>;
 
 #[derive(Clone)]
@@ -26,9 +26,9 @@ impl Keyword {
 
         out.push(Keyword {
             definition: "print".to_string(),
-            runner: Arc::new(|(a, b): (&[String], &Option<Expression>), vars: &mut VarMap| {
+            runner: Arc::new(|(a, b): (&[String], &Option<Expression>), vars: &mut VarMap, policy: &ExecutionPolicy| {
                 if let Some(exp) = b {
-                    match attempt_calculator_run(exp, vars) {
+                    match attempt_calculator_run(exp, vars, policy) {
                         Ok(v) => {
                             print!("{v}");
                             io::stdout().flush().unwrap();
@@ -36,13 +36,27 @@ impl Keyword {
                             return Ok(());
                         },
                         Err(e) => {
-                            return Err(RuntimeError::new(e));
+                            return Err(e);
                         }
                     }
                 }
                 if let Some(first) = a.first() {
-                    if let Some(_) = a.get(1).map(|v| v.parse::<bool>()) {
-                        return Err(RuntimeError::new("Cannot print an undefined value".to_string()));
+                    if a.get(1).is_some() {
+                        let error = RuntimeError::new(
+                            "Cannot print an undefined value".to_string(),
+                            ErrorType::OnUndefinedValue
+                        );
+
+                        if let Some(value) = policy.handle_error(error)? {
+                            match value {
+                                Value::String(value) => print!("{value}"),
+                                Value::Number(value) => print!("{value}"),
+                                Value::Undefined => {}
+                            }
+                            output_state::used_print();
+                            io::stdout().flush().unwrap();
+                            return Ok(());
+                        }
                     }
                     print!("{first}");
                     output_state::used_print();
@@ -50,7 +64,10 @@ impl Keyword {
                     return Ok(());
                 }
 
-                Err(RuntimeError::new("An Unknown error accord ups".to_string()))
+                Err(RuntimeError::new(
+                    "An Unknown error accord ups".to_string(),
+                    ErrorType::AlwaysError
+                ))
             }),
             parser: Arc::new(|a: String, vars: &mut VarMap| {
                 let a = a.strip_prefix("print").unwrap().trim();
@@ -77,23 +94,37 @@ impl Keyword {
 
         out.push(Keyword {
             definition: "println".to_string(),
-            runner: Arc::new(|(a, b): (&[String], &Option<Expression>), vars: &mut VarMap| {
+            runner: Arc::new(|(a, b): (&[String], &Option<Expression>), vars: &mut VarMap, policy: &ExecutionPolicy| {
                 if let Some(exp) = b {
-                    match attempt_calculator_run(exp, vars) {
+                    match attempt_calculator_run(exp, vars, policy) {
                         Ok(v) => {
                             println!("{v}");
                             output_state::used_println();
                             return Ok(());
                         },
                         Err(e) => {
-                            return Err(RuntimeError::new(e));
+                            return Err(e);
                         }
                     }
                 }
 
                 if let Some(first) = a.first() {
-                    if let Some(_) = a.get(1).map(|v| v.parse::<bool>()) {
-                        return Err(RuntimeError::new("Cannot print an undefined value".to_string()));
+                    if a.get(1).is_some() {
+                        let error = RuntimeError::new(
+                            "Cannot print an undefined value".to_string(),
+                            ErrorType::OnUndefinedValue
+                        );
+
+                        if let Some(value) = policy.handle_error(error)? {
+                            output_state::used_println();
+                            match value {
+                                Value::String(value) => println!("{value}"),
+                                Value::Number(value) => println!("{value}"),
+                                Value::Undefined => {}
+                            }
+                            io::stdout().flush().unwrap();
+                            return Ok(());
+                        }
                     }
                     output_state::used_println();
                     println!("{first}");
@@ -101,7 +132,10 @@ impl Keyword {
                     return Ok(());
                 }
 
-                Err(RuntimeError::new("An Unknown error accord".to_string()))
+                Err(RuntimeError::new(
+                    "An Unknown error accord".to_string(),
+                    ErrorType::AlwaysError
+                ))
             }),
             parser: Arc::new(|a: String, vars: &mut VarMap| {
                 let a = a.strip_prefix("println").unwrap().trim();
@@ -129,7 +163,7 @@ impl Keyword {
 
         out.push(Keyword { 
             definition: "let".to_string(), 
-            runner: Arc::new(|(a, _b): (&[String], &Option<Expression>), vars: &mut VarMap| {
+            runner: Arc::new(|(a, _b): (&[String], &Option<Expression>), vars: &mut VarMap, _policy: &ExecutionPolicy| {
                 if let [name, value, undefined, ..] = a {
                     match vars.add_new(name.to_string(), value.to_string(), 
                     match undefined.as_str() {
@@ -138,11 +172,14 @@ impl Keyword {
                     }
                 ) {
                         Ok(()) => return Ok(()),
-                        Err(e) => return Err(RuntimeError::new(e)),
+                        Err(e) => return Err(RuntimeError::new(e, ErrorType::AlwaysError)),
                     }
                 }
 
-                Err(RuntimeError::new("An Unknown Error accord".to_string()))
+                Err(RuntimeError::new(
+                    "An Unknown Error accord".to_string(),
+                    ErrorType::AlwaysError
+                ))
             }),
             parser: Arc::new(|a: String, _vars: &mut VarMap| {
 

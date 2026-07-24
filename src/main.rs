@@ -1,9 +1,7 @@
 use std::fs::read_to_string;
 use std::process::exit;
 
-use colored::Colorize;
-
-use blocky_lang::{blocks_handler::{execute_blocks, parse_blocks::attempt_parse}, execution_policy::ExecutionPolicy, utils::output_state::take_newline_needed, var_handler::VarMap};
+use blocky_lang::{blocks_handler::{execute_blocks, parse_blocks::attempt_parse}, utils::{execution_policy::ExecutionPolicy, output_state::take_newline_needed}, var_handler::VarMap};
 
 fn main() {
     let mut policy = ExecutionPolicy::new();
@@ -14,13 +12,13 @@ fn main() {
     let cmdls = match attempt_parse(lines, &mut policy) {
         Ok(blocks) => blocks,
         Err(error) => {
-            eprintln!("{}", error.red());
+            error.report();
             exit(1);
         }
     };
 
     for cmdl in cmdls {
-        match execute_blocks::parse_execute_block(cmdl, &mut vars) {
+        match execute_blocks::parse_execute_block(cmdl, &mut vars, &policy) {
             Ok(()) => {}
             Err(re) => {
                 re.report();

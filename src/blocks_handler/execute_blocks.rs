@@ -1,6 +1,6 @@
-use crate::{blocks_handler::define_blocks::CodeBlock, line_handler::parse_lines::CommandLine, utils::runtime_error::RuntimeError, var_handler::VarMap};
+use crate::{blocks_handler::define_blocks::CodeBlock, line_handler::parse_lines::CommandLine, utils::{execution_policy::ExecutionPolicy, runtime_error::{ErrorType, RuntimeError}}, var_handler::VarMap};
 
-pub fn parse_execute_block(block: CodeBlock, vars: &mut VarMap) -> Result<(), RuntimeError> {
+pub fn parse_execute_block(block: CodeBlock, vars: &mut VarMap, policy: &ExecutionPolicy) -> Result<(), RuntimeError> {
     let insides = block.get_inside();
 
     for line in insides.lines().map(str::trim).filter(|l| !l.is_empty()) {
@@ -8,13 +8,13 @@ pub fn parse_execute_block(block: CodeBlock, vars: &mut VarMap) -> Result<(), Ru
 
         match out {
             Ok(mut o) => {
-                match o.execute(vars) {
+                match o.execute(vars, policy) {
                     Ok(()) => {},
                     Err(re) => return Err(re)
                 }
             },
             Err(msg) => {
-                return Err(RuntimeError::new(msg));
+                return Err(RuntimeError::new(msg, ErrorType::AlwaysError));
             }
         }
     }

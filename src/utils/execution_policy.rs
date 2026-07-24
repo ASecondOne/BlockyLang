@@ -1,4 +1,4 @@
-use crate::{var_handler::{Value, parse_type}};
+use crate::{utils::runtime_error::{ErrorType, RuntimeError}, var_handler::{Value, parse_type}};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum OnCodeBlockParseError {
@@ -71,6 +71,23 @@ impl ExecutionPolicy {
         )
     }
 
+    pub(crate) fn handle_error(&self, error: RuntimeError) -> Result<Option<Value>, RuntimeError> {
+        match error.get_error_type() {
+            ErrorType::AlwaysError => Err(error),
+            ErrorType::OnCodeBlockParseError => {
+                if self.should_halt_on_code_block_parse_error() {
+                    return Err(error);
+                }
+
+                Ok(None)
+            },
+            ErrorType::OnUndefinedValue => match &self.handle_undefined_value_as {
+                HandleUndefinedValueAs::HaltProgram => Err(error),
+                HandleUndefinedValueAs::Value(value) => Ok(Some(value.clone()))
+            }
+        }
+    }
+
     pub fn change_policy(&mut self, raw: String) -> Result<(), String> {
         for (line_index, line) in raw.lines().enumerate() {
             let line = line.trim();
@@ -101,5 +118,21 @@ impl ExecutionPolicy {
                 self.handle_undefined_value_as = v
             }
         }
+    }
+}
+
+#[test]
+fn test_undefined_value_policy_returns_its_value() {
+    let mut policy = ExecutionPolicy::new();
+    let _ = policy.change_policy("HandleUndefinedValueAs = \"fallback\"".to_string());
+
+    let error = RuntimeError::new(
+        "Cannot use an undefind value".to_string(),
+        ErrorType::OnUndefinedValue
+    );
+
+    match policy.handle_error(error) {
+        Ok(Some(Value::String(value))) => assert_eq!(value, "fallback"),
+        _ => panic!("the policy should return its fallback value"),
     }
 }

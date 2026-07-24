@@ -1,12 +1,23 @@
 use colored::Colorize;
 
 pub struct RuntimeError {
-    message: String
+    message: String,
+    etype: ErrorType
+}
+
+pub enum ErrorType {
+    AlwaysError,
+    OnCodeBlockParseError,
+    OnUndefinedValue
 }
 
 impl RuntimeError {
-    pub fn new(message: String) -> Self {
-        RuntimeError { message }
+    pub fn new(message: String, etype: ErrorType) -> Self {
+        RuntimeError { message, etype}
+    }
+
+    pub(crate) fn get_error_type(&self) -> &ErrorType {
+        &self.etype
     }
 
     pub fn report(&self) {

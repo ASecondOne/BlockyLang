@@ -1,4 +1,4 @@
-use crate::var_handler::VarMap;
+use crate::{utils::{execution_policy::ExecutionPolicy, runtime_error::{ErrorType, RuntimeError}}, var_handler::{Value, VarMap}};
 
 #[derive(Debug, PartialEq)]
 pub enum Expression {
@@ -195,44 +195,66 @@ pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
     }
 }
 
-pub fn attempt_calculator_run(exp: &Expression, vars: &VarMap) -> Result<f64, String> {
+pub fn attempt_calculator_run(exp: &Expression, vars: &VarMap, policy: &ExecutionPolicy) -> Result<f64, RuntimeError> {
     match exp {
-        Expression::Error(error) => Err(error.clone()),
+        Expression::Error(error) => Err(RuntimeError::new(error.clone(), ErrorType::AlwaysError)),
 
         Expression::Number(number) => Ok(*number), 
 
         Expression::Variable(var) => {
             if let Some((var, undefind)) = vars.get_var(var.clone()) {
                 if undefind {
-                    return Err("Cannot use an undefind value".to_string());
+                    let error = RuntimeError::new(
+                        "Cannot use an undefind value".to_string(),
+                        ErrorType::OnUndefinedValue
+                    );
+
+                    if let Some(value) = policy.handle_error(error)? {
+                        return match value {
+                            Value::Number(number) => Ok(number),
+                            _ => Err(RuntimeError::new(
+                                "Cannot use a non-number value inside an expression".to_string(),
+                                ErrorType::AlwaysError
+                            ))
+                        };
+                    }
                 }
                 match var.parse::<f64>() {
                     Ok(num) => return Ok(num),
-                    Err(_) => return Err("Error while parsing".to_string()),
+                    Err(_) => return Err(RuntimeError::new(
+                        "Error while parsing".to_string(),
+                        ErrorType::AlwaysError
+                    )),
                 }
             }
 
-            Err("failed getting variable".to_string())
+            Err(RuntimeError::new(
+                "failed getting variable".to_string(),
+                ErrorType::AlwaysError
+            ))
         }
 
         Expression::Add(left, right) => {
-            Ok(attempt_calculator_run(left, vars)? + attempt_calculator_run(right, vars)?)
+            Ok(attempt_calculator_run(left, vars, policy)? + attempt_calculator_run(right, vars, policy)?)
         }
 
         Expression::Subtract(left, right) => {
-            Ok(attempt_calculator_run(left, vars)? - attempt_calculator_run(right, vars)?)
+            Ok(attempt_calculator_run(left, vars, policy)? - attempt_calculator_run(right, vars, policy)?)
         }
 
         Expression::Multiply(left, right) => {
-            Ok(attempt_calculator_run(left, vars)? * attempt_calculator_run(right, vars)?)
+            Ok(attempt_calculator_run(left, vars, policy)? * attempt_calculator_run(right, vars, policy)?)
         }
 
         Expression::Divide(left, right) => {
-            let left = attempt_calculator_run(left, vars)?;
-            let right = attempt_calculator_run(right, vars)?;
+            let left = attempt_calculator_run(left, vars, policy)?;
+            let right = attempt_calculator_run(right, vars, policy)?;
 
             if right == 0.0 {
-                return Err("Cannot divide by zero".to_string());
+                return Err(RuntimeError::new(
+                    "Cannot divide by zero".to_string(),
+                    ErrorType::AlwaysError
+                ));
             }
 
             Ok(left / right)
@@ -502,4 +524,31 @@ fn test_unknown_characters_are_errors() {
         attempt_calculator_parse("2 $ + 3".to_string(), &vars),
         Expression::Error("Unexpected character '$' at position 3".to_string())
     );
+}
+
+#[test]
+fn test_undefined_variable_uses_policy_value() {
+    let mut vars = VarMap::new();
+    let _ = vars.add_new("a".to_string(), "N/A".to_string(), true);
+
+    let mut policy = ExecutionPolicy::new();
+    let _ = policy.change_policy("HandleUndefinedValueAs = 4".to_string());
+
+    let expression = attempt_calculator_parse("a + 1".to_string(), &vars);
+
+    match attempt_calculator_run(&expression, &vars, &policy) {
+        Ok(value) => assert_eq!(value, 5.0),
+        Err(_) => panic!("the policy value should replace the undefined value"),
+    }
+}
+
+#[test]
+fn test_undefined_variable_halts_by_default() {
+    let mut vars = VarMap::new();
+    let _ = vars.add_new("a".to_string(), "N/A".to_string(), true);
+
+    let policy = ExecutionPolicy::new();
+    let expression = attempt_calculator_parse("a + 1".to_string(), &vars);
+
+    assert!(attempt_calculator_run(&expression, &vars, &policy).is_err());
 }

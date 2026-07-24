@@ -1,4 +1,4 @@
-use crate::{alu::Expression, blocks_handler::define_blocks::BlockType, line_handler::define_lines::{Keyword, ParseResult}, utils::runtime_error::RuntimeError, var_handler::VarMap};
+use crate::{alu::Expression, blocks_handler::define_blocks::BlockType, line_handler::define_lines::{Keyword, ParseResult}, utils::{execution_policy::ExecutionPolicy, runtime_error::RuntimeError}, var_handler::VarMap};
 
 pub struct CommandLine {
     keyword: Keyword,
@@ -10,8 +10,8 @@ impl CommandLine {
         CommandLine { keyword, params }
     }
 
-    pub fn execute(&mut self, vars: &mut VarMap) -> Result<(), RuntimeError> {
-        (self.keyword.runner)((&self.params.0, &self.params.1), vars)
+    pub fn execute(&mut self, vars: &mut VarMap, policy: &ExecutionPolicy) -> Result<(), RuntimeError> {
+        (self.keyword.runner)((&self.params.0, &self.params.1), vars, policy)
     }
 
     pub fn attempt_parse(mut line: String, block_type: BlockType, vars: &mut VarMap) -> Result<CommandLine, String> {
@@ -48,4 +48,3 @@ impl CommandLine {
         Err("I dont know but smt broke".to_string())
     }
 }
-

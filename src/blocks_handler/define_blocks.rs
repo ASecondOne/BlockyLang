@@ -1,4 +1,4 @@
-use crate::execution_policy::ExecutionPolicy;
+use crate::utils::execution_policy::ExecutionPolicy;
 
 pub struct CodeBlock {
     block_type: BlockType,
