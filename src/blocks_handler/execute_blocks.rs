@@ -2,21 +2,33 @@ use crate::{blocks_handler::define_blocks::CodeBlock, line_handler::parse_lines:
 
 pub fn parse_execute_block(block: CodeBlock, vars: &mut VarMap, policy: &ExecutionPolicy) -> Result<(), RuntimeError> {
     let insides = block.get_inside();
+    let mut line_to_expand = String::new();
 
     for line in insides.lines().map(str::trim).filter(|l| !l.is_empty()) {
-        let out = CommandLine::attempt_parse(line.to_string(), block.get_block_type(), vars);
+        let content = line.trim_end_matches(';').trim();
 
-        match out {
-            Ok(mut o) => {
-                match o.execute(vars, policy) {
-                    Ok(()) => {},
-                    Err(re) => return Err(re)
-                }
-            },
-            Err(msg) => {
-                return Err(RuntimeError::new(msg, ErrorType::AlwaysError));
+        if !content.is_empty() {
+            if !line_to_expand.is_empty() {
+                line_to_expand.push(' ');
             }
+
+            line_to_expand.push_str(content);
         }
+
+        if !line.ends_with(';') {
+            continue;
+        }
+
+        let complete_line = std::mem::take(&mut line_to_expand);
+
+        let mut command = CommandLine::attempt_parse(
+            complete_line,
+            block.get_block_type(),
+            vars,
+        )
+        .map_err(|msg| RuntimeError::new(msg, ErrorType::AlwaysError))?;
+
+        command.execute(vars, policy)?;
     }
 
     Ok(())

@@ -12,7 +12,9 @@
 </define>
 
 <execute>
-    println foo7;
+    println 
+    foo7
+    ;
 
     println boolean;
 

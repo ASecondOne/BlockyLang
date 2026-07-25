@@ -1,3 +1,7 @@
+use std::println;
+
+use colored::Colorize;
+
 use crate::{alu::Expression, blocks_handler::define_blocks::BlockType, line_handler::define_lines::{Keyword, ParseResult}, utils::{execution_policy::ExecutionPolicy, runtime_error::RuntimeError}, var_handler::VarMap};
 
 pub struct CommandLine {
@@ -14,10 +18,8 @@ impl CommandLine {
         (self.keyword.runner)((&self.params.0, &self.params.1), vars, policy)
     }
 
-    pub fn attempt_parse(mut line: String, block_type: BlockType, vars: &mut VarMap) -> Result<CommandLine, String> {
+    pub fn attempt_parse(line: String, block_type: BlockType, vars: &mut VarMap) -> Result<CommandLine, String> {
         let keywords = Keyword::init();
-
-        line = line.trim_end_matches(';').to_string();
         let parts: Vec<&str> = line.split_ascii_whitespace().collect();
 
         if let Some(first) = parts.first() {
