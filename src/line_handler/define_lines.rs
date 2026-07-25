@@ -51,6 +51,7 @@ impl Keyword {
                             match value {
                                 Value::String(value) => print!("{value}"),
                                 Value::Number(value) => print!("{value}"),
+                                Value::Bool(value) => print!("{value}"),
                                 Value::Undefined => {}
                             }
                             output_state::used_print();
@@ -120,6 +121,7 @@ impl Keyword {
                             match value {
                                 Value::String(value) => println!("{value}"),
                                 Value::Number(value) => println!("{value}"),
+                                Value::Bool(value) => println!("{value}"),
                                 Value::Undefined => {}
                             }
                             io::stdout().flush().unwrap();

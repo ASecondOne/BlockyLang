@@ -7,11 +7,14 @@
     let num = 4.003;
     let string = "Hello";
     let foo7 = 4;
+    let boolean = false;
     let undefined a;
 </define>
 
 <execute>
     println foo7;
+
+    println boolean;
 
     println a;
 </execute>

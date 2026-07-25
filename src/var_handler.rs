@@ -4,6 +4,7 @@ use std::collections::HashMap;
 pub enum Value {
     String(String),
     Number(f64),
+    Bool(bool),
     Undefined
 }
 
@@ -28,6 +29,10 @@ impl Var {
         match &self.value {
             Value::Number(n) => Some(n.to_string()),
             Value::String(s) => Some(s.to_string()),
+            Value::Bool(b) => {
+                if *b { return Some("true".to_string()) }
+                Some("false".to_string())
+            }
             Value::Undefined => None,
         }
     }
@@ -77,6 +82,14 @@ pub fn parse_type(value: &str, undefined: bool) -> Result<Value, String> {
         return Ok(Value::Undefined);
     }
 
+    if value == "true" {
+        return Ok(Value::Bool(true))
+    }
+
+    if value == "false" {
+        return Ok(Value::Bool(false))
+    }
+
     if value.starts_with('"') && value.ends_with('"') {
         if let Some(inner) = value
             .strip_prefix('"')
@@ -85,10 +98,12 @@ pub fn parse_type(value: &str, undefined: bool) -> Result<Value, String> {
             return Ok(Value::String(inner.to_string()));
         }
 
-        Err("Something up with ya String".to_string())
-    } else if value.parse::<f64>().is_ok() {
-        Ok(Value::Number(value.parse::<f64>().unwrap()))
-    } else {
-        Err("Unknown data Type".to_string())
+        return Err("Something up with ya String".to_string())
     }
+    
+    if value.parse::<f64>().is_ok() {
+        return Ok(Value::Number(value.parse::<f64>().unwrap()))
+    } 
+    
+    Err("Unknown data Type".to_string())
 }
