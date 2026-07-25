@@ -12,6 +12,8 @@
 </define>
 
 <execute>
+    foo7 = 1;
+    
     println 
     foo7
     ;

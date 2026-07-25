@@ -1,4 +1,4 @@
-use std::println;
+use std::{format, println};
 
 use colored::Colorize;
 
@@ -22,7 +22,14 @@ impl CommandLine {
         let keywords = Keyword::init();
         let parts: Vec<&str> = line.split_ascii_whitespace().collect();
 
+        println!("{}", line.as_str().cyan());
+
         if let Some(first) = parts.first() {
+
+            if vars.var_exists(&first.to_string()) {
+                
+            }
+            
             if let Some(keyword) = keywords.iter().find(|k| k.definition == *first) {
                 if keyword.allowed_in.contains(&block_type) {
                     let mut params: (Vec<String>, Option<Expression>) = (Vec::new(), None);
@@ -44,6 +51,8 @@ impl CommandLine {
                 } else {
                     return Err(format!("Keyword {} not allowed inside {:?} block", keyword.definition, block_type))
                 }
+            } else {
+                return Err(format!("Keyword {} dosnt exist", first).to_string());
             }
         }
 
