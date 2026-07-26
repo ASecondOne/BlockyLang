@@ -2,20 +2,20 @@ use std::{format, println};
 
 use colored::Colorize;
 
-use crate::{alu::Expression, blocks_handler::define_blocks::BlockType, line_handler::define_lines::{Keyword, ParseResult}, utils::{execution_policy::ExecutionPolicy, runtime_error::RuntimeError}, var_handler::VarMap};
+use crate::{blocks_handler::define_blocks::BlockType, line_handler::define_lines::{Keyword, ParseResult}, utils::{execution_policy::ExecutionPolicy, runtime_error::RuntimeError}, var_handler::VarMap};
 
 pub struct CommandLine {
     keyword: Keyword,
-    params: (Vec<String>, Option<Expression>),
+    params: Vec<ParseResult>,
 }
 
 impl CommandLine {
-    pub fn new(keyword: Keyword, params: (Vec<String>, Option<Expression>)) -> Self {
+    pub fn new(keyword: Keyword, params: Vec<ParseResult>) -> Self {
         CommandLine { keyword, params }
     }
 
-    pub fn execute(&mut self, vars: &mut VarMap, policy: &ExecutionPolicy) -> Result<(), RuntimeError> {
-        (self.keyword.runner)((&self.params.0, &self.params.1), vars, policy)
+    pub fn execute(self, vars: &mut VarMap, policy: &ExecutionPolicy) -> Result<(), RuntimeError> {
+        (self.keyword.runner)(self.params, vars, policy)
     }
 
     pub fn attempt_parse(line: String, block_type: BlockType, vars: &mut VarMap) -> Result<CommandLine, String> {
@@ -29,19 +29,14 @@ impl CommandLine {
             if vars.var_exists(&first.to_string()) {
                 if let Some(keyword) = keywords.iter().find(|k| k.definition == "Set Value") {
                     if keyword.allowed_in.contains(&block_type) { 
-                        let mut params: (Vec<String>, Option<Expression>) = (Vec::new(), None);
+                        let mut params = Vec::new();
 
                         match (keyword.parser)(line, vars) {
-                            ParseResult::One(s) => {
-                                params.0.push(s);
-                            }
-                            ParseResult::Many(v) => {
-                                params.0.extend(v);
-                            }
-                            ParseResult::OneAlu(exp) => {
-                                params.1 = Some(exp);
-                            }
+                            ParseResult::StandardOut(v) => {
+                                params.extend(v);
+                            },
                             ParseResult::ParseError(e) => return Err(e),
+                            _ => {},
                         }
 
                         return Ok(CommandLine::new((*keyword).clone(), params));
@@ -51,19 +46,14 @@ impl CommandLine {
             
             if let Some(keyword) = keywords.iter().find(|k| k.definition == *first) {
                 if keyword.allowed_in.contains(&block_type) {
-                    let mut params: (Vec<String>, Option<Expression>) = (Vec::new(), None);
+                    let mut params = Vec::new();
 
                     match (keyword.parser)(line, vars) {
-                        ParseResult::One(s) => {
-                            params.0.push(s);
-                        }
-                        ParseResult::Many(v) => {
-                            params.0.extend(v);
-                        }
-                        ParseResult::OneAlu(exp) => {
-                            params.1 = Some(exp);
-                        }
+                        ParseResult::StandardOut(v) => {
+                            params.extend(v);
+                        },
                         ParseResult::ParseError(e) => return Err(e),
+                        _ => {},
                     }
 
                     return Ok(CommandLine::new((*keyword).clone(), params));

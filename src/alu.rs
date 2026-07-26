@@ -1,14 +1,14 @@
 use crate::{utils::{execution_policy::ExecutionPolicy, runtime_error::{ErrorType, RuntimeError}}, var_handler::{Value, VarMap}};
 
 #[derive(Debug, PartialEq)]
-pub enum Expression {
+pub enum AluExpression {
     Error(String),
     Number(f64),
     Variable(String),
-    Add(Box<Expression>, Box<Expression>),
-    Subtract(Box<Expression>, Box<Expression>),
-    Multiply(Box<Expression>, Box<Expression>),
-    Divide(Box<Expression>, Box<Expression>),
+    Add(Box<AluExpression>, Box<AluExpression>),
+    Subtract(Box<AluExpression>, Box<AluExpression>),
+    Multiply(Box<AluExpression>, Box<AluExpression>),
+    Divide(Box<AluExpression>, Box<AluExpression>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -94,70 +94,70 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse(mut self) -> Result<Expression, String> {
+    fn parse(mut self) -> Result<AluExpression, String> {
         if self.tokens.is_empty() {
-            return Err("Expected an expression".to_string());
+            return Err("Expected an AluExpression".to_string());
         }
 
-        let expression = self.parse_expression()?;
+        let AluExpression = self.parse_AluExpression()?;
 
         if let Some(token) = self.current() {
             return Err(format!("Unexpected token: {token:?}"));
         }
 
-        Ok(expression)
+        Ok(AluExpression)
     }
 
-    fn parse_expression(&mut self) -> Result<Expression, String> {
-        let mut expression = self.parse_term()?;
+    fn parse_AluExpression(&mut self) -> Result<AluExpression, String> {
+        let mut AluExpression = self.parse_term()?;
 
         loop {
             match self.current() {
                 Some(Token::Plus) => {
                     self.advance();
                     let right = self.parse_term()?;
-                    expression = Expression::Add(Box::new(expression), Box::new(right));
+                    AluExpression = AluExpression::Add(Box::new(AluExpression), Box::new(right));
                 }
                 Some(Token::Minus) => {
                     self.advance();
                     let right = self.parse_term()?;
-                    expression = Expression::Subtract(Box::new(expression), Box::new(right));
+                    AluExpression = AluExpression::Subtract(Box::new(AluExpression), Box::new(right));
                 }
                 _ => break,
             }
         }
 
-        Ok(expression)
+        Ok(AluExpression)
     }
 
-    fn parse_term(&mut self) -> Result<Expression, String> {
-        let mut expression = self.parse_operand()?;
+    fn parse_term(&mut self) -> Result<AluExpression, String> {
+        let mut AluExpression = self.parse_operand()?;
 
         loop {
             match self.current() {
                 Some(Token::Multiply) => {
                     self.advance();
                     let right = self.parse_operand()?;
-                    expression = Expression::Multiply(Box::new(expression), Box::new(right));
+                    AluExpression = AluExpression::Multiply(Box::new(AluExpression), Box::new(right));
                 }
                 Some(Token::Divide) => {
                     self.advance();
                     let right = self.parse_operand()?;
-                    expression = Expression::Divide(Box::new(expression), Box::new(right));
+                    AluExpression = AluExpression::Divide(Box::new(AluExpression), Box::new(right));
                 }
                 _ => break,
             }
         }
 
-        Ok(expression)
+        Ok(AluExpression)
     }
 
-    fn parse_operand(&mut self) -> Result<Expression, String> {
+    fn parse_operand(&mut self) -> Result<AluExpression, String> {
         match self.current() {
             Some(Token::Number(number)) => {
                 let number = *number;
                 self.advance();
-                Ok(Expression::Number(number))
+                Ok(AluExpression::Number(number))
             }
             Some(Token::Variable(name)) => {
                 let name = name.clone();
@@ -167,10 +167,10 @@ impl<'a> Parser<'a> {
                 }
 
                 self.advance();
-                Ok(Expression::Variable(name))
+                Ok(AluExpression::Variable(name))
             }
             Some(token) => Err(format!("Expected an operand, found {token:?}")),
-            None => Err("Expected an operand, found end of expression".to_string()),
+            None => Err("Expected an operand, found end of AluExpression".to_string()),
         }
     }
 
@@ -183,25 +183,25 @@ impl<'a> Parser<'a> {
     }
 }
 
-pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> Expression {
+pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> AluExpression {
     let tokens = match tokenize(&to_parse) {
         Ok(tokens) => tokens,
-        Err(error) => return Expression::Error(error),
+        Err(error) => return AluExpression::Error(error),
     };
 
     match Parser::new(tokens, vars).parse() {
-        Ok(expression) => expression,
-        Err(error) => Expression::Error(error),
+        Ok(AluExpression) => AluExpression,
+        Err(error) => AluExpression::Error(error),
     }
 }
 
-pub fn attempt_calculator_run(exp: &Expression, vars: &VarMap, policy: &ExecutionPolicy) -> Result<f64, RuntimeError> {
+pub fn attempt_calculator_run(exp: &AluExpression, vars: &VarMap, policy: &ExecutionPolicy) -> Result<f64, RuntimeError> {
     match exp {
-        Expression::Error(error) => Err(RuntimeError::new(error.clone(), ErrorType::AlwaysError)),
+        AluExpression::Error(error) => Err(RuntimeError::new(error.clone(), ErrorType::AlwaysError)),
 
-        Expression::Number(number) => Ok(*number), 
+        AluExpression::Number(number) => Ok(*number), 
 
-        Expression::Variable(var) => {
+        AluExpression::Variable(var) => {
             if let Some((var, undefind)) = vars.get_var(var.clone()) {
                 if undefind {
                     let error = RuntimeError::new(
@@ -213,7 +213,7 @@ pub fn attempt_calculator_run(exp: &Expression, vars: &VarMap, policy: &Executio
                         return match value {
                             Value::Number(number) => Ok(number),
                             _ => Err(RuntimeError::new(
-                                "Cannot use a non-number value inside an expression".to_string(),
+                                "Cannot use a non-number value inside an AluExpression".to_string(),
                                 ErrorType::AlwaysError
                             ))
                         };
@@ -234,19 +234,19 @@ pub fn attempt_calculator_run(exp: &Expression, vars: &VarMap, policy: &Executio
             ))
         }
 
-        Expression::Add(left, right) => {
+        AluExpression::Add(left, right) => {
             Ok(attempt_calculator_run(left, vars, policy)? + attempt_calculator_run(right, vars, policy)?)
         }
 
-        Expression::Subtract(left, right) => {
+        AluExpression::Subtract(left, right) => {
             Ok(attempt_calculator_run(left, vars, policy)? - attempt_calculator_run(right, vars, policy)?)
         }
 
-        Expression::Multiply(left, right) => {
+        AluExpression::Multiply(left, right) => {
             Ok(attempt_calculator_run(left, vars, policy)? * attempt_calculator_run(right, vars, policy)?)
         }
 
-        Expression::Divide(left, right) => {
+        AluExpression::Divide(left, right) => {
             let left = attempt_calculator_run(left, vars, policy)?;
             let right = attempt_calculator_run(right, vars, policy)?;
 
@@ -270,9 +270,9 @@ fn test_simple_division() {
 
     assert_eq!(
         result,
-        Expression::Divide(
-            Box::new(Expression::Number(8.0)),
-            Box::new(Expression::Number(2.0)),
+        AluExpression::Divide(
+            Box::new(AluExpression::Number(8.0)),
+            Box::new(AluExpression::Number(2.0)),
         )
     );
 }
@@ -285,12 +285,12 @@ fn test_multiple_multiplications() {
 
     assert_eq!(
         result,
-        Expression::Multiply(
-            Box::new(Expression::Multiply(
-                Box::new(Expression::Number(2.0)),
-                Box::new(Expression::Number(3.0)),
+        AluExpression::Multiply(
+            Box::new(AluExpression::Multiply(
+                Box::new(AluExpression::Number(2.0)),
+                Box::new(AluExpression::Number(3.0)),
             )),
-            Box::new(Expression::Number(4.0)),
+            Box::new(AluExpression::Number(4.0)),
         )
     );
 }
@@ -303,12 +303,12 @@ fn test_multiple_divisions() {
 
     assert_eq!(
         result,
-        Expression::Divide(
-            Box::new(Expression::Divide(
-                Box::new(Expression::Number(16.0)),
-                Box::new(Expression::Number(4.0)),
+        AluExpression::Divide(
+            Box::new(AluExpression::Divide(
+                Box::new(AluExpression::Number(16.0)),
+                Box::new(AluExpression::Number(4.0)),
             )),
-            Box::new(Expression::Number(2.0)),
+            Box::new(AluExpression::Number(2.0)),
         )
     );
 }
@@ -321,12 +321,12 @@ fn test_multiplication_then_division() {
 
     assert_eq!(
         result,
-        Expression::Divide(
-            Box::new(Expression::Multiply(
-                Box::new(Expression::Number(2.0)),
-                Box::new(Expression::Number(3.0)),
+        AluExpression::Divide(
+            Box::new(AluExpression::Multiply(
+                Box::new(AluExpression::Number(2.0)),
+                Box::new(AluExpression::Number(3.0)),
             )),
-            Box::new(Expression::Number(4.0)),
+            Box::new(AluExpression::Number(4.0)),
         )
     );
 }
@@ -339,12 +339,12 @@ fn test_division_then_multiplication() {
 
     assert_eq!(
         result,
-        Expression::Multiply(
-            Box::new(Expression::Divide(
-                Box::new(Expression::Number(8.0)),
-                Box::new(Expression::Number(4.0)),
+        AluExpression::Multiply(
+            Box::new(AluExpression::Divide(
+                Box::new(AluExpression::Number(8.0)),
+                Box::new(AluExpression::Number(4.0)),
             )),
-            Box::new(Expression::Number(2.0)),
+            Box::new(AluExpression::Number(2.0)),
         )
     );
 }
@@ -357,32 +357,32 @@ fn test_division_precedence() {
 
     assert_eq!(
         result,
-        Expression::Add(
-            Box::new(Expression::Number(1.0)),
-            Box::new(Expression::Divide(
-                Box::new(Expression::Number(8.0)),
-                Box::new(Expression::Number(4.0)),
+        AluExpression::Add(
+            Box::new(AluExpression::Number(1.0)),
+            Box::new(AluExpression::Divide(
+                Box::new(AluExpression::Number(8.0)),
+                Box::new(AluExpression::Number(4.0)),
             )),
         )
     );
 }
 
 #[test]
-fn test_multiple_high_precedence_expressions() {
+fn test_multiple_high_precedence_AluExpressions() {
     let vars = VarMap::new();
 
     let result = attempt_calculator_parse("2 * 3 + 8 / 4".to_string(), &vars);
 
     assert_eq!(
         result,
-        Expression::Add(
-            Box::new(Expression::Multiply(
-                Box::new(Expression::Number(2.0)),
-                Box::new(Expression::Number(3.0)),
+        AluExpression::Add(
+            Box::new(AluExpression::Multiply(
+                Box::new(AluExpression::Number(2.0)),
+                Box::new(AluExpression::Number(3.0)),
             )),
-            Box::new(Expression::Divide(
-                Box::new(Expression::Number(8.0)),
-                Box::new(Expression::Number(4.0)),
+            Box::new(AluExpression::Divide(
+                Box::new(AluExpression::Number(8.0)),
+                Box::new(AluExpression::Number(4.0)),
             )),
         )
     );
@@ -396,18 +396,18 @@ fn test_long_multiplication_and_division_chain() {
 
     assert_eq!(
         result,
-        Expression::Divide(
-            Box::new(Expression::Multiply(
-                Box::new(Expression::Divide(
-                    Box::new(Expression::Multiply(
-                        Box::new(Expression::Number(2.0)),
-                        Box::new(Expression::Number(3.0)),
+        AluExpression::Divide(
+            Box::new(AluExpression::Multiply(
+                Box::new(AluExpression::Divide(
+                    Box::new(AluExpression::Multiply(
+                        Box::new(AluExpression::Number(2.0)),
+                        Box::new(AluExpression::Number(3.0)),
                     )),
-                    Box::new(Expression::Number(4.0)),
+                    Box::new(AluExpression::Number(4.0)),
                 )),
-                Box::new(Expression::Number(5.0)),
+                Box::new(AluExpression::Number(5.0)),
             )),
-            Box::new(Expression::Number(6.0)),
+            Box::new(AluExpression::Number(6.0)),
         )
     );
 }
@@ -420,51 +420,51 @@ fn test_all_operators_and_precedence() {
 
     assert_eq!(
         result,
-        Expression::Add(
-            Box::new(Expression::Subtract(
-                Box::new(Expression::Add(
-                    Box::new(Expression::Number(1.0)),
-                    Box::new(Expression::Multiply(
-                        Box::new(Expression::Number(2.0)),
-                        Box::new(Expression::Number(3.0)),
+        AluExpression::Add(
+            Box::new(AluExpression::Subtract(
+                Box::new(AluExpression::Add(
+                    Box::new(AluExpression::Number(1.0)),
+                    Box::new(AluExpression::Multiply(
+                        Box::new(AluExpression::Number(2.0)),
+                        Box::new(AluExpression::Number(3.0)),
                     )),
                 )),
-                Box::new(Expression::Divide(
-                    Box::new(Expression::Number(8.0)),
-                    Box::new(Expression::Number(4.0)),
+                Box::new(AluExpression::Divide(
+                    Box::new(AluExpression::Number(8.0)),
+                    Box::new(AluExpression::Number(4.0)),
                 )),
             )),
-            Box::new(Expression::Divide(
-                Box::new(Expression::Multiply(
-                    Box::new(Expression::Number(5.0)),
-                    Box::new(Expression::Number(6.0)),
+            Box::new(AluExpression::Divide(
+                Box::new(AluExpression::Multiply(
+                    Box::new(AluExpression::Number(5.0)),
+                    Box::new(AluExpression::Number(6.0)),
                 )),
-                Box::new(Expression::Number(3.0)),
+                Box::new(AluExpression::Number(3.0)),
             )),
         )
     );
 }
 
 #[test]
-fn test_expression_without_spaces() {
+fn test_AluExpression_without_spaces() {
     let vars = VarMap::new();
 
     let result = attempt_calculator_parse("1+2*3/4-5".to_string(), &vars);
 
     assert_eq!(
         result,
-        Expression::Subtract(
-            Box::new(Expression::Add(
-                Box::new(Expression::Number(1.0)),
-                Box::new(Expression::Divide(
-                    Box::new(Expression::Multiply(
-                        Box::new(Expression::Number(2.0)),
-                        Box::new(Expression::Number(3.0)),
+        AluExpression::Subtract(
+            Box::new(AluExpression::Add(
+                Box::new(AluExpression::Number(1.0)),
+                Box::new(AluExpression::Divide(
+                    Box::new(AluExpression::Multiply(
+                        Box::new(AluExpression::Number(2.0)),
+                        Box::new(AluExpression::Number(3.0)),
                     )),
-                    Box::new(Expression::Number(4.0)),
+                    Box::new(AluExpression::Number(4.0)),
                 )),
             )),
-            Box::new(Expression::Number(5.0)),
+            Box::new(AluExpression::Number(5.0)),
         )
     );
 }
@@ -476,17 +476,17 @@ fn test_variable_with_digit_on_either_side() {
 
     assert_eq!(
         attempt_calculator_parse("foo2 + 1".to_string(), &vars),
-        Expression::Add(
-            Box::new(Expression::Variable("foo2".to_string())),
-            Box::new(Expression::Number(1.0)),
+        AluExpression::Add(
+            Box::new(AluExpression::Variable("foo2".to_string())),
+            Box::new(AluExpression::Number(1.0)),
         )
     );
 
     assert_eq!(
         attempt_calculator_parse("1 + foo2".to_string(), &vars),
-        Expression::Add(
-            Box::new(Expression::Number(1.0)),
-            Box::new(Expression::Variable("foo2".to_string())),
+        AluExpression::Add(
+            Box::new(AluExpression::Number(1.0)),
+            Box::new(AluExpression::Variable("foo2".to_string())),
         )
     );
 }
@@ -497,7 +497,7 @@ fn test_undefined_variable_with_digit_is_an_error() {
 
     assert_eq!(
         attempt_calculator_parse("foo8 + 1".to_string(), &vars),
-        Expression::Error("Variable not found: foo8".to_string())
+        AluExpression::Error("Variable not found: foo8".to_string())
     );
 }
 
@@ -509,7 +509,7 @@ fn test_missing_and_double_operands_are_errors() {
         assert!(
             matches!(
                 attempt_calculator_parse(input.to_string(), &vars),
-                Expression::Error(_)
+                AluExpression::Error(_)
             ),
             "expected {input:?} to be rejected"
         );
@@ -522,7 +522,7 @@ fn test_unknown_characters_are_errors() {
 
     assert_eq!(
         attempt_calculator_parse("2 $ + 3".to_string(), &vars),
-        Expression::Error("Unexpected character '$' at position 3".to_string())
+        AluExpression::Error("Unexpected character '$' at position 3".to_string())
     );
 }
 
@@ -534,9 +534,9 @@ fn test_undefined_variable_uses_policy_value() {
     let mut policy = ExecutionPolicy::new();
     let _ = policy.change_policy("HandleUndefinedValueAs = 4".to_string());
 
-    let expression = attempt_calculator_parse("a + 1".to_string(), &vars);
+    let AluExpression = attempt_calculator_parse("a + 1".to_string(), &vars);
 
-    match attempt_calculator_run(&expression, &vars, &policy) {
+    match attempt_calculator_run(&AluExpression, &vars, &policy) {
         Ok(value) => assert_eq!(value, 5.0),
         Err(_) => panic!("the policy value should replace the undefined value"),
     }
@@ -548,7 +548,7 @@ fn test_undefined_variable_halts_by_default() {
     let _ = vars.add_new("a".to_string(), "N/A".to_string(), true);
 
     let policy = ExecutionPolicy::new();
-    let expression = attempt_calculator_parse("a + 1".to_string(), &vars);
+    let AluExpression = attempt_calculator_parse("a + 1".to_string(), &vars);
 
-    assert!(attempt_calculator_run(&expression, &vars, &policy).is_err());
+    assert!(attempt_calculator_run(&AluExpression, &vars, &policy).is_err());
 }

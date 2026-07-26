@@ -14,7 +14,7 @@
 <execute>
     println foo7;
 
-    foo7 = 66;
+    foo7 = 66 + 1;
     
     println 
     foo7

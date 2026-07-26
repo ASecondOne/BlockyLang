@@ -9,7 +9,7 @@ pub enum Value {
 }
 
 #[derive(Clone)]
-struct Var {
+pub struct Var {
     value: Value,
 }
 
@@ -37,7 +37,7 @@ impl Var {
         }
     }
 
-    fn get_value(&self) -> &Value {
+    pub fn get_value(&self) -> &Value {
         return &self.value;
     }
 }
@@ -77,6 +77,14 @@ impl VarMap {
     pub fn get_pure_value(&self, name: String) -> Option<Value> {
         if let Some(found) = self.vars.get(&name) {
            return Some(found.value.clone());
+        }
+
+        None
+    }
+
+    pub fn get_pure_var(&self, name: String) -> Option<Var> {
+        if let Some(found) = self.vars.get(&name) {
+           return Some(found.clone());
         }
 
         None
