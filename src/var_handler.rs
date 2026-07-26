@@ -49,6 +49,10 @@ impl VarMap {
         }
     }
 
+    pub fn replace_value(&mut self, old_value: String, new_value: Value) {
+        self.vars.insert(old_value, Var { value: new_value });
+    }
+    
     pub fn add_new(&mut self, name: String, value: String, undefined: bool) -> Result<(), String> {
         match parse_type(&value, undefined) {
             Ok(v) => {
@@ -65,6 +69,14 @@ impl VarMap {
                 Value::Undefined => Some(("".to_string(), true)),
                 _ => Some((found.as_string().unwrap(), false))
             };
+        }
+
+        None
+    }
+
+    pub fn get_pure_value(&self, name: String) -> Option<Value> {
+        if let Some(found) = self.vars.get(&name) {
+           return Some(found.value.clone());
         }
 
         None

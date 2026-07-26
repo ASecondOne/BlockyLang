@@ -27,7 +27,26 @@ impl CommandLine {
         if let Some(first) = parts.first() {
 
             if vars.var_exists(&first.to_string()) {
-                
+                if let Some(keyword) = keywords.iter().find(|k| k.definition == "Set Value") {
+                    if keyword.allowed_in.contains(&block_type) { 
+                        let mut params: (Vec<String>, Option<Expression>) = (Vec::new(), None);
+
+                        match (keyword.parser)(line, vars) {
+                            ParseResult::One(s) => {
+                                params.0.push(s);
+                            }
+                            ParseResult::Many(v) => {
+                                params.0.extend(v);
+                            }
+                            ParseResult::OneAlu(exp) => {
+                                params.1 = Some(exp);
+                            }
+                            ParseResult::ParseError(e) => return Err(e),
+                        }
+
+                        return Ok(CommandLine::new((*keyword).clone(), params));
+                    }
+                }
             }
             
             if let Some(keyword) = keywords.iter().find(|k| k.definition == *first) {

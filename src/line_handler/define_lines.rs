@@ -1,4 +1,4 @@
-use std::{io::{self, Write}, sync::Arc};
+use std::{io::{self, Write}, mem::discriminant, println, sync::Arc, vec};
 
 use crate::{alu::{Expression, attempt_calculator_parse, attempt_calculator_run}, blocks_handler::define_blocks::BlockType, utils::{execution_policy::ExecutionPolicy, output_state, runtime_error::{ErrorType, RuntimeError}}, var_handler::{Value, VarMap, parse_type}};
 
@@ -217,6 +217,45 @@ impl Keyword {
                 ParseResult::Many(vec![name.to_string(), value.to_string(), "DEFINED".to_string()])
             }),
             allowed_in: vec![BlockType::Define] 
+        });
+
+        out.push(Keyword { 
+            definition: "Set Value".to_string(), 
+            runner: Arc::new(|(a, _b): (&[String], &Option<Expression>), vars: &mut VarMap, _policy: &ExecutionPolicy| {
+
+                let var = a.first().unwrap().trim();
+                let new_value = a[1].trim();
+
+                match parse_type(new_value, false) {
+                    Ok(new_var) => {
+                        let old_var = vars.get_pure_value(var.to_string()).unwrap();
+
+                        if discriminant(&new_var) == discriminant(&old_var) {
+                            vars.replace_value(var.to_string(), new_var);
+                            return Ok(());
+                        } else {
+                            return Err(RuntimeError::new("Cannot set an different value to an origin var".to_string(), ErrorType::AlwaysError));
+                        }
+
+                    },
+                    Err(e) => return Err(RuntimeError::new(e, ErrorType::AlwaysError))
+                }
+
+                // Err(RuntimeError::new("N/A".to_string(), ErrorType::AlwaysError))
+            }), 
+            parser: Arc::new(|a: String, _vars: &mut VarMap| {
+
+                let parts = a.split_once('=');
+
+                if parts.is_some() {
+                    let (var, value) = parts.unwrap();
+
+                    return ParseResult::Many(vec![var.to_string(), value.to_string()])
+                }
+
+                ParseResult::One("n".to_string())
+            }), 
+            allowed_in: vec![BlockType::Execute]
         });
 
         out
