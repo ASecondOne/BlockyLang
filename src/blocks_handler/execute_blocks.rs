@@ -21,7 +21,7 @@ pub fn parse_execute_block(block: CodeBlock, vars: &mut VarMap, policy: &Executi
 
         let complete_line = std::mem::take(&mut line_to_expand);
 
-        let mut command = CommandLine::attempt_parse(
+        let command = CommandLine::attempt_parse(
             complete_line,
             block.get_block_type(),
             vars,

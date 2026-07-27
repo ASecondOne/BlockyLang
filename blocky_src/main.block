@@ -14,10 +14,10 @@
 <execute>
     println foo7;
 
-    foo7 = 66 + 1;
+    a = foo7 + 1;
     
     println 
-    foo7
+    a
     ;
 
     println boolean;

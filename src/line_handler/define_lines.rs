@@ -1,6 +1,6 @@
 use std::{io::{self, Write}, mem::discriminant, println, sync::Arc, vec};
 
-use crate::{alu::{AluExpression, attempt_calculator_parse, attempt_calculator_run}, blocks_handler::define_blocks::BlockType, utils::{execution_policy::ExecutionPolicy, output_state, runtime_error::{ErrorType, RuntimeError}}, var_handler::{Value, Var, VarMap, parse_type}};
+use crate::{alu::{AluExpression, attempt_calculator_parse, attempt_calculator_run}, blocks_handler::define_blocks::BlockType, utils::{execution_policy::ExecutionPolicy, output_state, runtime_error::{ErrorType::{self, AlwaysError}, RuntimeError}}, var_handler::{Value, Var, VarMap, parse_type}};
 
 pub enum ParseResult {
     Text(String),                   // Standard for Strings, stuff that dose not need special attention
@@ -281,49 +281,88 @@ impl Keyword {
 
         out.push(Keyword { 
             definition: "Set Value".to_string(), 
-            runner: Arc::new(|a, vars: &mut VarMap, _policy: &ExecutionPolicy| {
+            runner: Arc::new(|a, vars: &mut VarMap, policy: &ExecutionPolicy| {
                 
-                let [
-                    ParseResult::Text(var),
-                    ParseResult::Text(new_value),
-                ] = a.as_slice() 
-                else {
-                    return Err(RuntimeError::new(
-                        "Invalid arguments for let".to_string(),
-                        ErrorType::AlwaysError,
-                    ));
-                };
+                match a.as_slice() {
+                    [ParseResult::Text(var), ParseResult::Text(new_value)] => {
+                        match parse_type(new_value, false) {
+                            Ok(new_var) => {
+                                let old_var = vars.get_pure_value(var.to_string()).unwrap();
 
-                match parse_type(new_value, false) {
-                    Ok(new_var) => {
-                        let old_var = vars.get_pure_value(var.to_string()).unwrap();
+                                if discriminant(&new_var) == discriminant(&old_var) {
+                                    vars.replace_value(var.to_string(), new_var);
+                                    return Ok(());
+                                } else {
+                                    return Err(RuntimeError::new("Cannot set an different value to an origin var".to_string(), ErrorType::AlwaysError));
+                                }
 
-                        if discriminant(&new_var) == discriminant(&old_var) {
-                            vars.replace_value(var.to_string(), new_var);
-                            return Ok(());
-                        } else {
-                            return Err(RuntimeError::new("Cannot set an different value to an origin var".to_string(), ErrorType::AlwaysError));
+                            },
+                            Err(e) => return Err(RuntimeError::new(e, ErrorType::AlwaysError))
                         }
+                    }
 
-                    },
-                    Err(e) => return Err(RuntimeError::new(e, ErrorType::AlwaysError))
+                    [ParseResult::Text(var), ParseResult::Alu(exp)] => {
+                        match attempt_calculator_run(exp, vars, policy) {
+                            Ok(v) => {
+                                let old_var = vars.get_pure_value(var.to_string()).unwrap();
+
+                                match parse_type(&v.to_string(), false) {
+                                    Ok(v) => {
+                                        if discriminant(&v) == discriminant(&old_var) {
+                                            vars.replace_value(var.to_string(), v);
+                                            return Ok(());
+                                        } else if discriminant(&old_var) == discriminant(&Value::Undefined) {
+                                            vars.replace_value(var.to_string(), v);
+                                            return Ok(());
+                                        } else {
+                                            return Err(RuntimeError::new("Cannot set an different value to an origin var".to_string(), ErrorType::AlwaysError));
+                                        }
+                                    },
+                                    Err(e) => {
+                                        return Err(RuntimeError::new(e, AlwaysError));
+                                    }
+                                }
+                            },
+                            Err(e) => {
+                                return Err(e);
+                            }
+                        }
+                    }
+
+                    _ => {
+                        return Err(RuntimeError::new(
+                            "Invalid arguments for let".to_string(),
+                            ErrorType::AlwaysError,
+                        ));
+                    }
                 }
-
-                // Err(RuntimeError::new("N/A".to_string(), ErrorType::AlwaysError))
             }), 
-            parser: Arc::new(|a: String, _vars: &mut VarMap| {
-
+            parser: Arc::new(|a: String, vars: &mut VarMap| {
                 let parts = a.split_once('=');
 
                 if parts.is_some() {
                     let (var, value) = parts.unwrap();
 
-                    return ParseResult::StandardOut(
-                        vec![
-                            ParseResult::Text(var.trim().to_string()),
-                            ParseResult::Text(value.trim().to_string()),
-                        ]
-                    )
+                    if parse_type(value, false).is_ok() {
+                        return ParseResult::StandardOut(
+                            vec![
+                                ParseResult::Text(var.trim().to_string()),
+                                ParseResult::Text(value.trim().to_string()),
+                            ]
+                        )
+                    }
+
+                    match attempt_calculator_parse(value.to_string(), vars) {
+                        AluExpression::Error(error) => return ParseResult::ParseError(error),
+                        alu_expression => {
+                            return ParseResult::StandardOut(
+                                vec![
+                                    ParseResult::Text(var.trim().to_string()),
+                                    ParseResult::Alu(alu_expression)
+                                ]
+                            );
+                        }
+                    }
                 }
 
                 return ParseResult::StandardOut(
