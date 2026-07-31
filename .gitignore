@@ -2,9 +2,5 @@
 /.vscode
 /cargo.lock
 
-
-# Added by cargo
-#
-# already existing elements were commented out
-
-#/target
+/v1/target
+/v1/cargo.lock

@@ -1,6 +1,6 @@
-use std::fs::read_to_string;
+use std::{fs::read_to_string, print};
 
-use blocky_lang::parser::parse_blocks::parse_blocks;
+use blocky_lang::parser::parse_blocks::{Block, parse_blocks};
 
 pub static PRINT_DEBUG: bool = true;
 
@@ -19,5 +19,16 @@ fn main() {
 
     debug_print!("CONTENTS", contents);
 
-    parse_blocks(contents);
+    match parse_blocks(contents) {
+        Ok(a) => {
+            for b in &a {
+                match b {
+                    Block::Execute(text) => println!("{text}"),
+                }
+            }
+        },
+        Err(er) => {
+        }
+
+    }
 }

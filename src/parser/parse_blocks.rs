@@ -1,16 +1,17 @@
-use std::{fmt::format, format, print};
+use std::format;
 
+#[derive(Debug)]
 pub enum Block {
     Execute(String)
 }
 
 pub fn parse_blocks(lines: String) -> Result<Vec<Block>, String> {
-    let out: Vec<Block> = Vec::new();
+    let mut out: Vec<Block> = Vec::new();
 
-    let mut lines = lines.lines().peekable();
+    let mut lines = lines.lines();
 
     let mut open_closure: Option<String> = None;
-    let contents: Option<String> = None;
+    let mut contents = String::new();
 
     while let Some(line) = lines.next() {
         if line.is_empty() { continue; }
@@ -19,8 +20,11 @@ pub fn parse_blocks(lines: String) -> Result<Vec<Block>, String> {
             if get_end_tag(line, ac.as_str()) {
                 open_closure = None;
 
+                out.push(Block::Execute(std::mem::take(&mut contents)));
+
                 continue;
             } else {
+                contents.push_str(line);
                 open_closure = Some(ac.to_string());
             }
         } else {
@@ -30,6 +34,10 @@ pub fn parse_blocks(lines: String) -> Result<Vec<Block>, String> {
 
             if get_end_tag(line, start_tag) {
                 open_closure = None;
+
+                let contents = get_between_tags(line, start_tag);
+
+                out.push(Block::Execute(contents.to_string()));
 
                 continue;
             } else {
@@ -54,4 +62,11 @@ fn get_end_tag(text: &str, tag: &str) -> bool {
     }
 
     false
+}
+
+fn get_between_tags<'a>(text: &'a str, st: &str) -> &'a str {
+    let end_tag = format!("</{st}>");
+    let start_tag = format!("<{st}>");
+
+    return text.strip_prefix(&start_tag).unwrap().strip_suffix(&end_tag).unwrap();
 }
