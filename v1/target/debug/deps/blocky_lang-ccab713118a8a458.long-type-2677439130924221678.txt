@@ -1,0 +1,1 @@
+Arc<(dyn for<'a, 'b, 'c> Fn((&'a [String], &'b Option<Expression>), &'c mut VarMap) -> i32 + 'static)>

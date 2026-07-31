@@ -1,0 +1,554 @@
+use crate::{utils::{execution_policy::ExecutionPolicy, runtime_error::{ErrorType, RuntimeError}}, var_handler::{Value, VarMap}};
+
+#[derive(Debug, PartialEq)]
+pub enum AluExpression {
+    Error(String),
+    Number(f64),
+    Variable(String),
+    Add(Box<AluExpression>, Box<AluExpression>),
+    Subtract(Box<AluExpression>, Box<AluExpression>),
+    Multiply(Box<AluExpression>, Box<AluExpression>),
+    Divide(Box<AluExpression>, Box<AluExpression>),
+}
+
+#[derive(Debug, PartialEq)]
+enum Token {
+    Number(f64),
+    Variable(String),
+    Plus,
+    Minus,
+    Multiply,
+    Divide,
+}
+
+fn tokenize(input: &str) -> Result<Vec<Token>, String> {
+    let mut tokens = Vec::new();
+    let mut chars = input.char_indices().peekable();
+
+    while let Some((index, character)) = chars.next() {
+        match character {
+            character if character.is_whitespace() => {}
+            '+' => tokens.push(Token::Plus),
+            '-' => tokens.push(Token::Minus),
+            '*' => tokens.push(Token::Multiply),
+            '/' => tokens.push(Token::Divide),
+            character if character.is_ascii_digit() || character == '.' => {
+                let start = index;
+                let mut end = index + character.len_utf8();
+
+                while let Some(&(next_index, next_character)) = chars.peek() {
+                    if !next_character.is_ascii_digit() && next_character != '.' {
+                        break;
+                    }
+
+                    chars.next();
+                    end = next_index + next_character.len_utf8();
+                }
+
+                let raw_number = &input[start..end];
+                let number = raw_number
+                    .parse::<f64>()
+                    .map_err(|_| format!("Invalid number: {raw_number}"))?;
+
+                tokens.push(Token::Number(number));
+            }
+            character if character.is_ascii_alphabetic() || character == '_' => {
+                let start = index;
+                let mut end = index + character.len_utf8();
+
+                while let Some(&(next_index, next_character)) = chars.peek() {
+                    if !next_character.is_ascii_alphanumeric() && next_character != '_' {
+                        break;
+                    }
+
+                    chars.next();
+                    end = next_index + next_character.len_utf8();
+                }
+
+                tokens.push(Token::Variable(input[start..end].to_string()));
+            }
+            _ => {
+                return Err(format!(
+                    "Unexpected character '{character}' at position {}",
+                    index + 1
+                ));
+            }
+        }
+    }
+
+    Ok(tokens)
+}
+
+struct Parser<'a> {
+    tokens: Vec<Token>,
+    position: usize,
+    vars: &'a VarMap,
+}
+
+impl<'a> Parser<'a> {
+    fn new(tokens: Vec<Token>, vars: &'a VarMap) -> Self {
+        Self {
+            tokens,
+            position: 0,
+            vars,
+        }
+    }
+
+    fn parse(mut self) -> Result<AluExpression, String> {
+        if self.tokens.is_empty() {
+            return Err("Expected an AluExpression".to_string());
+        }
+
+        let alu_expression = self.parse_AluExpression()?;
+
+        if let Some(token) = self.current() {
+            return Err(format!("Unexpected token: {token:?}"));
+        }
+
+        Ok(alu_expression)
+    }
+
+    fn parse_AluExpression(&mut self) -> Result<AluExpression, String> {
+        let mut AluExpression = self.parse_term()?;
+
+        loop {
+            match self.current() {
+                Some(Token::Plus) => {
+                    self.advance();
+                    let right = self.parse_term()?;
+                    AluExpression = AluExpression::Add(Box::new(AluExpression), Box::new(right));
+                }
+                Some(Token::Minus) => {
+                    self.advance();
+                    let right = self.parse_term()?;
+                    AluExpression = AluExpression::Subtract(Box::new(AluExpression), Box::new(right));
+                }
+                _ => break,
+            }
+        }
+
+        Ok(AluExpression)
+    }
+
+    fn parse_term(&mut self) -> Result<AluExpression, String> {
+        let mut AluExpression = self.parse_operand()?;
+
+        loop {
+            match self.current() {
+                Some(Token::Multiply) => {
+                    self.advance();
+                    let right = self.parse_operand()?;
+                    AluExpression = AluExpression::Multiply(Box::new(AluExpression), Box::new(right));
+                }
+                Some(Token::Divide) => {
+                    self.advance();
+                    let right = self.parse_operand()?;
+                    AluExpression = AluExpression::Divide(Box::new(AluExpression), Box::new(right));
+                }
+                _ => break,
+            }
+        }
+
+        Ok(AluExpression)
+    }
+
+    fn parse_operand(&mut self) -> Result<AluExpression, String> {
+        match self.current() {
+            Some(Token::Number(number)) => {
+                let number = *number;
+                self.advance();
+                Ok(AluExpression::Number(number))
+            }
+            Some(Token::Variable(name)) => {
+                let name = name.clone();
+
+                if !self.vars.var_exists(&name) {
+                    return Err(format!("Variable not found: {name}"));
+                }
+
+                self.advance();
+                Ok(AluExpression::Variable(name))
+            }
+            Some(token) => Err(format!("Expected an operand, found {token:?}")),
+            None => Err("Expected an operand, found end of AluExpression".to_string()),
+        }
+    }
+
+    fn current(&self) -> Option<&Token> {
+        self.tokens.get(self.position)
+    }
+
+    fn advance(&mut self) {
+        self.position += 1;
+    }
+}
+
+pub fn attempt_calculator_parse(to_parse: String, vars: &VarMap) -> AluExpression {
+    let tokens = match tokenize(&to_parse) {
+        Ok(tokens) => tokens,
+        Err(error) => return AluExpression::Error(error),
+    };
+
+    match Parser::new(tokens, vars).parse() {
+        Ok(AluExpression) => AluExpression,
+        Err(error) => AluExpression::Error(error),
+    }
+}
+
+pub fn attempt_calculator_run(exp: &AluExpression, vars: &VarMap, policy: &ExecutionPolicy) -> Result<f64, RuntimeError> {
+    match exp {
+        AluExpression::Error(error) => Err(RuntimeError::new(error.clone(), ErrorType::AlwaysError)),
+
+        AluExpression::Number(number) => Ok(*number), 
+
+        AluExpression::Variable(var) => {
+            if let Some((var, undefind)) = vars.get_var(var.clone()) {
+                if undefind {
+                    let error = RuntimeError::new(
+                        "Cannot use an undefind value".to_string(),
+                        ErrorType::OnUndefinedValue
+                    );
+
+                    if let Some(value) = policy.handle_error(error)? {
+                        return match value {
+                            Value::Number(number) => Ok(number),
+                            _ => Err(RuntimeError::new(
+                                "Cannot use a non-number value inside an AluExpression".to_string(),
+                                ErrorType::AlwaysError
+                            ))
+                        };
+                    }
+                }
+                match var.parse::<f64>() {
+                    Ok(num) => return Ok(num),
+                    Err(_) => return Err(RuntimeError::new(
+                        "Error while parsing".to_string(),
+                        ErrorType::AlwaysError
+                    )),
+                }
+            }
+
+            Err(RuntimeError::new(
+                "failed getting variable".to_string(),
+                ErrorType::AlwaysError
+            ))
+        }
+
+        AluExpression::Add(left, right) => {
+            Ok(attempt_calculator_run(left, vars, policy)? + attempt_calculator_run(right, vars, policy)?)
+        }
+
+        AluExpression::Subtract(left, right) => {
+            Ok(attempt_calculator_run(left, vars, policy)? - attempt_calculator_run(right, vars, policy)?)
+        }
+
+        AluExpression::Multiply(left, right) => {
+            Ok(attempt_calculator_run(left, vars, policy)? * attempt_calculator_run(right, vars, policy)?)
+        }
+
+        AluExpression::Divide(left, right) => {
+            let left = attempt_calculator_run(left, vars, policy)?;
+            let right = attempt_calculator_run(right, vars, policy)?;
+
+            if right == 0.0 {
+                return Err(RuntimeError::new(
+                    "Cannot divide by zero".to_string(),
+                    ErrorType::AlwaysError
+                ));
+            }
+
+            Ok(left / right)
+        }
+    }
+}
+
+#[test]
+fn test_simple_division() {
+    let vars = VarMap::new();
+
+    let result = attempt_calculator_parse("8 / 2".to_string(), &vars);
+
+    assert_eq!(
+        result,
+        AluExpression::Divide(
+            Box::new(AluExpression::Number(8.0)),
+            Box::new(AluExpression::Number(2.0)),
+        )
+    );
+}
+
+#[test]
+fn test_multiple_multiplications() {
+    let vars = VarMap::new();
+
+    let result = attempt_calculator_parse("2 * 3 * 4".to_string(), &vars);
+
+    assert_eq!(
+        result,
+        AluExpression::Multiply(
+            Box::new(AluExpression::Multiply(
+                Box::new(AluExpression::Number(2.0)),
+                Box::new(AluExpression::Number(3.0)),
+            )),
+            Box::new(AluExpression::Number(4.0)),
+        )
+    );
+}
+
+#[test]
+fn test_multiple_divisions() {
+    let vars = VarMap::new();
+
+    let result = attempt_calculator_parse("16 / 4 / 2".to_string(), &vars);
+
+    assert_eq!(
+        result,
+        AluExpression::Divide(
+            Box::new(AluExpression::Divide(
+                Box::new(AluExpression::Number(16.0)),
+                Box::new(AluExpression::Number(4.0)),
+            )),
+            Box::new(AluExpression::Number(2.0)),
+        )
+    );
+}
+
+#[test]
+fn test_multiplication_then_division() {
+    let vars = VarMap::new();
+
+    let result = attempt_calculator_parse("2 * 3 / 4".to_string(), &vars);
+
+    assert_eq!(
+        result,
+        AluExpression::Divide(
+            Box::new(AluExpression::Multiply(
+                Box::new(AluExpression::Number(2.0)),
+                Box::new(AluExpression::Number(3.0)),
+            )),
+            Box::new(AluExpression::Number(4.0)),
+        )
+    );
+}
+
+#[test]
+fn test_division_then_multiplication() {
+    let vars = VarMap::new();
+
+    let result = attempt_calculator_parse("8 / 4 * 2".to_string(), &vars);
+
+    assert_eq!(
+        result,
+        AluExpression::Multiply(
+            Box::new(AluExpression::Divide(
+                Box::new(AluExpression::Number(8.0)),
+                Box::new(AluExpression::Number(4.0)),
+            )),
+            Box::new(AluExpression::Number(2.0)),
+        )
+    );
+}
+
+#[test]
+fn test_division_precedence() {
+    let vars = VarMap::new();
+
+    let result = attempt_calculator_parse("1 + 8 / 4".to_string(), &vars);
+
+    assert_eq!(
+        result,
+        AluExpression::Add(
+            Box::new(AluExpression::Number(1.0)),
+            Box::new(AluExpression::Divide(
+                Box::new(AluExpression::Number(8.0)),
+                Box::new(AluExpression::Number(4.0)),
+            )),
+        )
+    );
+}
+
+#[test]
+fn test_multiple_high_precedence_AluExpressions() {
+    let vars = VarMap::new();
+
+    let result = attempt_calculator_parse("2 * 3 + 8 / 4".to_string(), &vars);
+
+    assert_eq!(
+        result,
+        AluExpression::Add(
+            Box::new(AluExpression::Multiply(
+                Box::new(AluExpression::Number(2.0)),
+                Box::new(AluExpression::Number(3.0)),
+            )),
+            Box::new(AluExpression::Divide(
+                Box::new(AluExpression::Number(8.0)),
+                Box::new(AluExpression::Number(4.0)),
+            )),
+        )
+    );
+}
+
+#[test]
+fn test_long_multiplication_and_division_chain() {
+    let vars = VarMap::new();
+
+    let result = attempt_calculator_parse("2 * 3 / 4 * 5 / 6".to_string(), &vars);
+
+    assert_eq!(
+        result,
+        AluExpression::Divide(
+            Box::new(AluExpression::Multiply(
+                Box::new(AluExpression::Divide(
+                    Box::new(AluExpression::Multiply(
+                        Box::new(AluExpression::Number(2.0)),
+                        Box::new(AluExpression::Number(3.0)),
+                    )),
+                    Box::new(AluExpression::Number(4.0)),
+                )),
+                Box::new(AluExpression::Number(5.0)),
+            )),
+            Box::new(AluExpression::Number(6.0)),
+        )
+    );
+}
+
+#[test]
+fn test_all_operators_and_precedence() {
+    let vars = VarMap::new();
+
+    let result = attempt_calculator_parse("1 + 2 * 3 - 8 / 4 + 5 * 6 / 3".to_string(), &vars);
+
+    assert_eq!(
+        result,
+        AluExpression::Add(
+            Box::new(AluExpression::Subtract(
+                Box::new(AluExpression::Add(
+                    Box::new(AluExpression::Number(1.0)),
+                    Box::new(AluExpression::Multiply(
+                        Box::new(AluExpression::Number(2.0)),
+                        Box::new(AluExpression::Number(3.0)),
+                    )),
+                )),
+                Box::new(AluExpression::Divide(
+                    Box::new(AluExpression::Number(8.0)),
+                    Box::new(AluExpression::Number(4.0)),
+                )),
+            )),
+            Box::new(AluExpression::Divide(
+                Box::new(AluExpression::Multiply(
+                    Box::new(AluExpression::Number(5.0)),
+                    Box::new(AluExpression::Number(6.0)),
+                )),
+                Box::new(AluExpression::Number(3.0)),
+            )),
+        )
+    );
+}
+
+#[test]
+fn test_AluExpression_without_spaces() {
+    let vars = VarMap::new();
+
+    let result = attempt_calculator_parse("1+2*3/4-5".to_string(), &vars);
+
+    assert_eq!(
+        result,
+        AluExpression::Subtract(
+            Box::new(AluExpression::Add(
+                Box::new(AluExpression::Number(1.0)),
+                Box::new(AluExpression::Divide(
+                    Box::new(AluExpression::Multiply(
+                        Box::new(AluExpression::Number(2.0)),
+                        Box::new(AluExpression::Number(3.0)),
+                    )),
+                    Box::new(AluExpression::Number(4.0)),
+                )),
+            )),
+            Box::new(AluExpression::Number(5.0)),
+        )
+    );
+}
+
+#[test]
+fn test_variable_with_digit_on_either_side() {
+    let mut vars = VarMap::new();
+    let _ = vars.add_new("foo2".to_string(), "7".to_string(), false);
+
+    assert_eq!(
+        attempt_calculator_parse("foo2 + 1".to_string(), &vars),
+        AluExpression::Add(
+            Box::new(AluExpression::Variable("foo2".to_string())),
+            Box::new(AluExpression::Number(1.0)),
+        )
+    );
+
+    assert_eq!(
+        attempt_calculator_parse("1 + foo2".to_string(), &vars),
+        AluExpression::Add(
+            Box::new(AluExpression::Number(1.0)),
+            Box::new(AluExpression::Variable("foo2".to_string())),
+        )
+    );
+}
+
+#[test]
+fn test_undefined_variable_with_digit_is_an_error() {
+    let vars = VarMap::new();
+
+    assert_eq!(
+        attempt_calculator_parse("foo8 + 1".to_string(), &vars),
+        AluExpression::Error("Variable not found: foo8".to_string())
+    );
+}
+
+#[test]
+fn test_missing_and_double_operands_are_errors() {
+    let vars = VarMap::new();
+
+    for input in ["2 +", "+ 2", "2 + * 3", "2 3"] {
+        assert!(
+            matches!(
+                attempt_calculator_parse(input.to_string(), &vars),
+                AluExpression::Error(_)
+            ),
+            "expected {input:?} to be rejected"
+        );
+    }
+}
+
+#[test]
+fn test_unknown_characters_are_errors() {
+    let vars = VarMap::new();
+
+    assert_eq!(
+        attempt_calculator_parse("2 $ + 3".to_string(), &vars),
+        AluExpression::Error("Unexpected character '$' at position 3".to_string())
+    );
+}
+
+#[test]
+fn test_undefined_variable_uses_policy_value() {
+    let mut vars = VarMap::new();
+    let _ = vars.add_new("a".to_string(), "N/A".to_string(), true);
+
+    let mut policy = ExecutionPolicy::new();
+    let _ = policy.change_policy("HandleUndefinedValueAs = 4".to_string());
+
+    let AluExpression = attempt_calculator_parse("a + 1".to_string(), &vars);
+
+    match attempt_calculator_run(&AluExpression, &vars, &policy) {
+        Ok(value) => assert_eq!(value, 5.0),
+        Err(_) => panic!("the policy value should replace the undefined value"),
+    }
+}
+
+#[test]
+fn test_undefined_variable_halts_by_default() {
+    let mut vars = VarMap::new();
+    let _ = vars.add_new("a".to_string(), "N/A".to_string(), true);
+
+    let policy = ExecutionPolicy::new();
+    let AluExpression = attempt_calculator_parse("a + 1".to_string(), &vars);
+
+    assert!(attempt_calculator_run(&AluExpression, &vars, &policy).is_err());
+}

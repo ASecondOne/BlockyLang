@@ -1,33 +1,23 @@
 use std::fs::read_to_string;
-use std::process::exit;
 
-use blocky_lang::{blocks_handler::{execute_blocks, parse_blocks::attempt_parse}, utils::{execution_policy::ExecutionPolicy, output_state::take_newline_needed}, var_handler::VarMap};
+use blocky_lang::parser::parse_blocks::parse_blocks;
 
-fn main() {
-    let mut policy = ExecutionPolicy::new();
-    let mut vars = VarMap::new();
+pub static PRINT_DEBUG: bool = true;
 
-    let lines = read_to_string("./blocky_src/main.block").unwrap();
-
-    let cmdls = match attempt_parse(lines, &mut policy) {
-        Ok(blocks) => blocks,
-        Err(error) => {
-            error.report();
-            exit(1);
+macro_rules! debug_print {
+    ($($value:expr),*) => {
+        if PRINT_DEBUG {
+            $(
+                println!("{}", $value);
+            )*
         }
     };
+}
 
-    for cmdl in cmdls {
-        match execute_blocks::parse_execute_block(cmdl, &mut vars, &policy) {
-            Ok(()) => {}
-            Err(re) => {
-                re.report();
-                exit(1)
-            }
-        };
-    }
+fn main() {
+    let contents = read_to_string("./blocky_src/HelloWorld.block").unwrap();
 
-    if take_newline_needed() {
-        println!();
-    }
+    debug_print!("CONTENTS", contents);
+
+    parse_blocks(contents);
 }
