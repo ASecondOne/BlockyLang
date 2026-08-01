@@ -1,4 +1,4 @@
-use std::format;
+use std::{format, print};
 
 #[derive(Debug)]
 pub enum Block {
@@ -17,6 +17,16 @@ pub fn parse_blocks(lines: String) -> Result<Vec<Block>, String> {
         if line.is_empty() { continue; }
 
         if let Some(ac) = open_closure {
+            if let Some(extra_content) = line.strip_suffix(&format!("</{ac}>")) {
+                if !extra_content.is_empty() {
+                    open_closure = None;
+
+                    out.push(Block::Execute(extra_content.to_string()));
+
+                    continue;
+                }
+            }
+
             if get_end_tag(line, ac.as_str()) {
                 open_closure = None;
 
@@ -31,6 +41,24 @@ pub fn parse_blocks(lines: String) -> Result<Vec<Block>, String> {
             let start_tag = get_tag(line).unwrap_or_else(
                 || return "NONE"
             );
+
+            if let Some(extra_content) = line.strip_prefix(&format!("<{start_tag}>")) {
+                if !extra_content.is_empty() {
+                    if get_end_tag(extra_content, start_tag) {
+                        open_closure = None;
+
+                        let contents = get_between_tags(line, start_tag);
+
+                        out.push(Block::Execute(contents.to_string()));
+
+                        continue;
+                    } else {
+                        contents.push_str(extra_content);
+                        open_closure = Some(start_tag.to_string());
+                        continue;
+                    }
+                }
+            }
 
             if get_end_tag(line, start_tag) {
                 open_closure = None;

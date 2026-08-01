@@ -2,7 +2,7 @@ use std::{fs::read_to_string, print};
 
 use blocky_lang::parser::parse_blocks::{Block, parse_blocks};
 
-pub static PRINT_DEBUG: bool = true;
+pub static PRINT_DEBUG: bool = false;
 
 macro_rules! debug_print {
     ($($value:expr),*) => {
