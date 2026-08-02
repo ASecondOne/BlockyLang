@@ -1,4 +1,4 @@
-use std::{fs::read_to_string, print};
+use std::fs::read_to_string;
 
 use blocky_lang::parser::parse_blocks::{Block, parse_blocks};
 
@@ -15,15 +15,19 @@ macro_rules! debug_print {
 }
 
 fn main() {
-    let contents = read_to_string("./blocky_src/HelloWorld.block").unwrap();
+    let contents = read_to_string("./blocky_src/HelloWorld2.block").unwrap();
 
     debug_print!("CONTENTS", contents);
+
+    
 
     match parse_blocks(contents) {
         Ok(a) => {
             for b in &a {
                 match b {
-                    Block::Execute(text) => println!("{text}"),
+                    Block::Execute(_) => {
+                        
+                    },
                 }
             }
         },

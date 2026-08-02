@@ -1,8 +1,10 @@
-use std::{format, print};
+use std::{format, vec};
+
+use crate::parser::parse_lines::{Expression, parse_lines};
 
 #[derive(Debug)]
 pub enum Block {
-    Execute(String)
+    Execute(Expression)
 }
 
 pub fn parse_blocks(lines: String) -> Result<Vec<Block>, String> {
@@ -11,7 +13,7 @@ pub fn parse_blocks(lines: String) -> Result<Vec<Block>, String> {
     let mut lines = lines.lines();
 
     let mut open_closure: Option<String> = None;
-    let mut contents = String::new();
+    let mut contents = Vec::new();
 
     while let Some(line) = lines.next() {
         if line.is_empty() { continue; }
@@ -21,7 +23,7 @@ pub fn parse_blocks(lines: String) -> Result<Vec<Block>, String> {
                 if !extra_content.is_empty() {
                     open_closure = None;
 
-                    out.push(Block::Execute(extra_content.to_string()));
+                    out.push(Block::Execute(parse_lines(vec![extra_content])));
 
                     continue;
                 }
@@ -30,11 +32,11 @@ pub fn parse_blocks(lines: String) -> Result<Vec<Block>, String> {
             if get_end_tag(line, ac.as_str()) {
                 open_closure = None;
 
-                out.push(Block::Execute(std::mem::take(&mut contents)));
+                out.push(Block::Execute(parse_lines(std::mem::take(&mut contents))));
 
                 continue;
             } else {
-                contents.push_str(line);
+                contents.push(line);
                 open_closure = Some(ac.to_string());
             }
         } else {
@@ -49,11 +51,11 @@ pub fn parse_blocks(lines: String) -> Result<Vec<Block>, String> {
 
                         let contents = get_between_tags(line, start_tag);
 
-                        out.push(Block::Execute(contents.to_string()));
+                        out.push(Block::Execute(parse_lines(vec![contents])));
 
                         continue;
                     } else {
-                        contents.push_str(extra_content);
+                        contents.push(extra_content);
                         open_closure = Some(start_tag.to_string());
                         continue;
                     }
@@ -65,7 +67,7 @@ pub fn parse_blocks(lines: String) -> Result<Vec<Block>, String> {
 
                 let contents = get_between_tags(line, start_tag);
 
-                out.push(Block::Execute(contents.to_string()));
+                out.push(Block::Execute(parse_lines(vec![contents])));
 
                 continue;
             } else {

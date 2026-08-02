@@ -1,0 +1,13 @@
+<execute>
+    print "Hello World";
+</execute>
+
+<execute>
+    print "Hello World";print "Hello World";
+</execute>
+
+<execute>
+    print "Hello 
+    World"
+    ;
+</execute>
