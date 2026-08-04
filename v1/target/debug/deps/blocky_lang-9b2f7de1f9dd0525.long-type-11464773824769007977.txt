@@ -1,1 +1,0 @@
-Arc<(dyn for<'a, 'b> Fn(Vec<ParseResult>, &'a mut VarMap, &'b ExecutionPolicy) -> Result<(), RuntimeError> + 'static)>
