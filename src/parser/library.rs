@@ -16,13 +16,8 @@ pub static FUNCTIONS: LazyLock<HashMap<&'static str, Function>> = LazyLock::new(
 fn print(args: Expression) -> Result<(), ()> {
     match args {
         Expression::Value(v) => {
-            match v {
-                Value::String(s) => {
-                    println!("{}", s);
-                Ok(())
-                }
-            }
-            
+            println!("{v}");
+            Ok(())
         },
         Expression::ExecutionExpression(_) => {Err(())},
         Expression::None => {Err(())},
