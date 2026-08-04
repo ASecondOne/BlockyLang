@@ -1,13 +1,13 @@
 <execute>
-    print "Hello World";
+    println "Hello World";
 </execute>
 
 <execute>
-    print "Hello World";print "Hello World";
+    println "Hello World";println "Hello World";
 </execute>
 
 <execute>
-    print "Hello 
+      println "Hello 
     World"
     ;
 </execute>

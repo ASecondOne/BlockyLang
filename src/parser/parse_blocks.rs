@@ -4,7 +4,7 @@ use crate::parser::parse_lines::{Expression, parse_lines};
 
 #[derive(Debug)]
 pub enum Block {
-    Execute(Expression)
+    Execute(Vec<Expression>)
 }
 
 pub fn parse_blocks(lines: String) -> Result<Vec<Block>, String> {

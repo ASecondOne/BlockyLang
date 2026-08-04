@@ -1,6 +1,6 @@
 use std::fs::read_to_string;
 
-use blocky_lang::parser::parse_blocks::{Block, parse_blocks};
+use blocky_lang::{executer::dirty_executer::{self, execute}, parser::parse_blocks::{Block, parse_blocks}};
 
 pub static PRINT_DEBUG: bool = false;
 
@@ -25,13 +25,15 @@ fn main() {
         Ok(a) => {
             for b in &a {
                 match b {
-                    Block::Execute(_) => {
-                        
+                    Block::Execute(expressions) => {
+                        for expression in expressions {
+                            execute(expression.clone());
+                        }
                     },
                 }
             }
         },
-        Err(er) => {
+        Err(_er) => {
         }
 
     }
