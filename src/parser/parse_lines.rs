@@ -16,9 +16,14 @@ fn prepare_strings(lines: Vec<&str>) -> Vec<String> {
 
     let mut unfinished_line = String::new();
 
+    let mut inside_string = false;
+
     for line in lines {   
         for char in line.trim_start().chars() {
-            if char == ';' {
+            if char == '"' {
+                inside_string = !inside_string;
+            }
+            if char == ';' && !inside_string {
                 out.push(take(&mut unfinished_line));
             } else {
                 unfinished_line.push(char);

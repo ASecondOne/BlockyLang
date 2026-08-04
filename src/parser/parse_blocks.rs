@@ -16,14 +16,16 @@ pub fn parse_blocks(lines: String) -> Result<Vec<Block>, String> {
     let mut contents = Vec::new();
 
     while let Some(line) = lines.next() {
-        if line.is_empty() { continue; }
+        if line.trim().is_empty() { continue; }
 
         if let Some(ac) = open_closure {
             if let Some(extra_content) = line.strip_suffix(&format!("</{ac}>")) {
                 if !extra_content.is_empty() {
                     open_closure = None;
 
-                    out.push(Block::Execute(parse_lines(vec![extra_content])));
+                    contents.push(extra_content);
+
+                    out.push(Block::Execute(parse_lines(std::mem::take(&mut contents))));
 
                     continue;
                 }

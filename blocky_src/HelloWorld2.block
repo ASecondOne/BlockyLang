@@ -3,8 +3,8 @@
 </execute>
 
 <execute>
-    println "Hello World";println false;
-</execute>
+    println "Hello ; World";
+    println false;</execute>
 
 <execute>
       println 5.01
