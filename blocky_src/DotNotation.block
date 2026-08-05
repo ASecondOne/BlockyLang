@@ -1,0 +1,7 @@
+<execute>
+    println "Hello World".len();
+</execute>
+
+<execute>
+    println "Hello World".len().inc_one().inc_one().inc_one().inc_one().inc_one();
+</execute>

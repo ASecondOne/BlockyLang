@@ -1,6 +1,6 @@
 use std::fs::read_to_string;
 
-use blocky_lang::{executer::dirty_executer::{self, execute}, parser::parse_blocks::{Block, parse_blocks}};
+use blocky_lang::{executer::dirty_executer::execute, parser::parse_blocks::{Block, parse_blocks}};
 
 pub static PRINT_DEBUG: bool = false;
 
@@ -15,7 +15,7 @@ macro_rules! debug_print {
 }
 
 fn main() {
-    let contents = read_to_string("./blocky_src/HelloWorld2.block").unwrap();
+    let contents = read_to_string("./blocky_src/DotNotation.block").unwrap();
 
     debug_print!("CONTENTS", contents);
 
