@@ -1,0 +1,7 @@
+<define>
+    let a = "Hello";
+</define>
+
+<execute>
+    println a;
+</execute>

@@ -15,11 +15,9 @@ macro_rules! debug_print {
 }
 
 fn main() {
-    let contents = read_to_string("./blocky_src/DotNotation.block").unwrap();
+    let contents = read_to_string("./blocky_src/Variable.block").unwrap();
 
     debug_print!("CONTENTS", contents);
-
-    
 
     match parse_blocks(contents) {
         Ok(a) => {
@@ -30,6 +28,12 @@ fn main() {
                             execute(expression.clone());
                         }
                     },
+                    Block::Define(expressions) => {
+                        
+                    },
+                    Block::None => {
+                        
+                    }
                 }
             }
         },
