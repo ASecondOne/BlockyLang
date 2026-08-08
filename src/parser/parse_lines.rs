@@ -1,14 +1,15 @@
 use std::mem::take;
 
 use crate::parser::{
-    dot_notation_parser::parse_dot_notation,
-    library::FUNCTIONS,
-    value_parser::{Value, parse_value},
+    dot_notation_parser::parse_dot_notation, library::FUNCTIONS, value_parser::{Value, parse_value}, variable_parser::{Variable, parse_variable},
 };
 
 #[derive(Debug, Clone)]
 pub enum Expression {
     Value(Value),
+    Variable(Variable),
+
+    VariableDefinition((String, Box<Expression>)),
 
     ExecutionExpression((String, Box<Expression>)),
     ChainingExpression((String, Box<Expression>)),
@@ -72,6 +73,8 @@ pub fn parse_lines(lines: Vec<&str>) -> Vec<Expression> {
                             unfinished_keyword,
                             Box::new(exp),
                         )));
+                    } else if let Some(exp) = parse_variable(expression.trim().to_string()) {
+                        out.push(exp);
                     }
 
                     continue 'lines;

@@ -27,11 +27,7 @@ fn println(args: Expression) -> Result<Output, ()> {
             println!("{v}");
             Ok(Output::Success)
         }
-        Expression::ChainingExpression(_) => {
-            return Err(());
-        }
-        Expression::ExecutionExpression(_) => Err(()),
-        Expression::None => Err(()),
+        _ => Err(()),
     }
 }
 
@@ -44,8 +40,7 @@ fn print(args: Expression) -> Result<Output, ()> {
         Expression::ChainingExpression(_) => {
             return Err(());
         }
-        Expression::ExecutionExpression(_) => Err(()),
-        Expression::None => Err(()),
+        _ => Err(()),
     }
 }
 
@@ -61,9 +56,7 @@ fn len(args: Expression) -> Result<Output, ()> {
             Value::Number(_) => Err(()),
             Value::Boolean(_) => Err(()),
         },
-        Expression::ChainingExpression(_) => Err(()),
-        Expression::ExecutionExpression(_) => Err(()),
-        Expression::None => Err(()),
+        _ => Err(()),
     }
 }
 
@@ -79,8 +72,6 @@ fn inc_one(args: Expression) -> Result<Output, ()> {
             },
             Value::Boolean(_) => Err(()),
         },
-        Expression::ChainingExpression(_) => Err(()),
-        Expression::ExecutionExpression(_) => Err(()),
-        Expression::None => Err(()),
+        _ => Err(()),
     }
 }

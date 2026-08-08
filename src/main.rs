@@ -1,6 +1,6 @@
 use std::fs::read_to_string;
 
-use blocky_lang::{executer::dirty_executer::execute, parser::parse_blocks::{Block, parse_blocks}};
+use blocky_lang::{executer::dirty_executer::execute, parser::{parse_blocks::{Block, parse_blocks}, variable_parser::VariableMap}};
 
 pub static PRINT_DEBUG: bool = false;
 
@@ -19,13 +19,15 @@ fn main() {
 
     debug_print!("CONTENTS", contents);
 
+    let mut vars = VariableMap::new();
+
     match parse_blocks(contents) {
         Ok(a) => {
             for b in &a {
                 match b {
                     Block::Execute(expressions) => {
                         for expression in expressions {
-                            execute(expression.clone());
+                            execute(expression.clone(), &mut vars);
                         }
                     },
                     Block::Define(expressions) => {
