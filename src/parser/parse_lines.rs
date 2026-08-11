@@ -1,7 +1,7 @@
 use std::mem::take;
 
 use crate::parser::{
-    dot_notation_parser::parse_dot_notation, library::FUNCTIONS, value_parser::{Value, parse_value}, variable_parser::{Variable, parse_variable},
+    dot_notation_parser::parse_dot_notation, library::FUNCTIONS, value_parser::{Value, parse_value}, variable_parser::{Variable, VariableMap, parse_variable_expression},
 };
 
 #[derive(Debug, Clone)]
@@ -40,7 +40,7 @@ fn prepare_strings(lines: Vec<&str>) -> Vec<String> {
     out
 }
 
-pub fn parse_lines(lines: Vec<&str>) -> Vec<Expression> {
+pub fn parse_lines(lines: Vec<&str>, vars: &mut VariableMap) -> Vec<Expression> {
     let mut out = Vec::new();
 
     let lines = prepare_strings(lines);
@@ -73,8 +73,13 @@ pub fn parse_lines(lines: Vec<&str>) -> Vec<Expression> {
                             unfinished_keyword,
                             Box::new(exp),
                         )));
-                    } else if let Some(exp) = parse_variable(expression.trim().to_string()) {
+                    } else if let Some(exp) = parse_variable_expression(expression.trim().to_string()) {
                         out.push(exp);
+                    } else if let Some(exp) = vars.get_var(expression.trim().to_string()) {
+                        out.push(Expression::ExecutionExpression((
+                            unfinished_keyword,
+                            Box::new(exp),
+                        )));
                     }
 
                     continue 'lines;
@@ -88,12 +93,12 @@ pub fn parse_lines(lines: Vec<&str>) -> Vec<Expression> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Expression, parse_lines};
+    use super::{Expression, parse_lines, VariableMap};
 
     #[test]
     fn distinguishes_print_from_println() {
         for function_name in ["print", "println"] {
-            let expressions = parse_lines(vec![&format!("{function_name} \"hello\";")]);
+            let expressions = parse_lines(vec![&format!("{function_name} \"hello\";")], &mut VariableMap::new());
 
             assert!(matches!(
                 expressions.as_slice(),

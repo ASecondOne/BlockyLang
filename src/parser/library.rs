@@ -18,6 +18,7 @@ pub static FUNCTIONS: LazyLock<HashMap<&'static str, Function>> = LazyLock::new(
         ("println", println as Function),
         ("len()", len as Function),
         ("inc_one()", inc_one as Function),
+        ("let",  m_let as Function),
     ])
 });
 
@@ -26,6 +27,14 @@ fn println(args: Expression) -> Result<Output, ()> {
         Expression::Value(v) => {
             println!("{v}");
             Ok(Output::Success)
+        },
+        Expression::Variable(mut v) => {
+            if let Some(v) = v.get_value() {
+                println!("{v}");
+                return Ok(Output::Success);
+            }
+
+            Err(())
         }
         _ => Err(()),
     }
@@ -36,9 +45,14 @@ fn print(args: Expression) -> Result<Output, ()> {
         Expression::Value(v) => {
             print!("{v}");
             Ok(Output::Success)
-        }
-        Expression::ChainingExpression(_) => {
-            return Err(());
+        },
+        Expression::Variable(mut v) => {
+            if let Some(v) = v.get_value() {
+                println!("{v}");
+                return Ok(Output::Success);
+            }
+
+            Err(())
         }
         _ => Err(()),
     }
@@ -75,3 +89,5 @@ fn inc_one(args: Expression) -> Result<Output, ()> {
         _ => Err(()),
     }
 }
+
+fn m_let(_: Expression) -> Result<Output, ()> {Err(())}

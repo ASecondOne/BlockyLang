@@ -1,4 +1,4 @@
-use crate::parser::{Expression, value_parser::{Value, parse_value}};
+use crate::parser::{Expression, library::Output, value_parser::{Value, parse_value}};
 
 #[derive(Debug, Clone)]
 pub struct Variable {
@@ -6,14 +6,14 @@ pub struct Variable {
     name: String,
 }
 
-pub struct VariableMap {
-    variables: Vec<Variable>
+impl Variable {
+    pub fn get_value(&mut self) -> Option<Value> {
+        Some(self.value.clone())
+    }
 }
 
-impl Variable {
-    pub fn new(value: Value, name: String) -> Variable {
-        Variable { value, name }
-    }
+pub struct VariableMap {
+    variables: Vec<Variable>
 }
 
 impl VariableMap {
@@ -24,9 +24,36 @@ impl VariableMap {
     pub fn add_new(&mut self, new_var: Variable) {
         self.variables.push(new_var);
     }
+
+    pub fn add_new_variable(&mut self, variable_name: String, expression: Expression) -> Result<Output, ()> {
+        if let Some((i, _)) = self.variables.iter().enumerate().find(|(_, v)| v.name == variable_name) {
+            self.variables.remove(i-1);
+        }
+
+        match expression {
+            Expression::Value(v) => {
+                self.variables.push(
+                    Variable { value: v, name: variable_name }
+                );
+                return Ok(Output::Success);
+            },
+            _ => {
+                return Err(());
+            }
+        }
+    }
+
+    pub fn get_var(&self, variable_name: String) -> Option<Expression> {
+        if let Some(v) = self.variables.iter().find(|v| v.name == variable_name) {
+            return Some(Expression::Variable(v.clone()));
+        }
+
+        None
+    }
+
 }
 
-pub fn parse_variable(expression: String) -> Option<Expression> {
+pub fn parse_variable_expression(expression: String) -> Option<Expression> {
 
     let mut potential_name = String::new();
     let mut potential_value = String::new();
@@ -36,6 +63,7 @@ pub fn parse_variable(expression: String) -> Option<Expression> {
     for char in expression.chars() {
         if char == '=' {
             past = true;
+            continue;
         } 
         
         if past {

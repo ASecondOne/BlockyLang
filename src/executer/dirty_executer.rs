@@ -1,5 +1,5 @@
 use crate::parser::{
-    Expression, library::{FUNCTIONS, Output}, variable_parser::VariableMap,
+    Expression, library::{FUNCTIONS, Output}, variable_parser::{VariableMap},
 };
 
 pub fn execute(ex: Expression, vars: &mut VariableMap) {
@@ -25,7 +25,10 @@ fn evaluate(ex: Expression, vars: &mut VariableMap) -> Result<Output, ()> {
         },
 
         Expression::VariableDefinition((variable_name, variable_value)) => {
-            Err(())
+            match vars.add_new_variable(variable_name, *variable_value) {
+                Ok(o) => Ok(o),
+                Err(_) => Err(())
+            }
         }
     }
 }
