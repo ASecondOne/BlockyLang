@@ -1,11 +1,14 @@
 use core::fmt;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Error, Formatter, write};
+
+use crate::parser::Expression;
 
 #[derive(Debug, Clone)]
 pub enum Value {
     String(String),
     Boolean(bool),
     Number(f64),
+    Undefined,
 }
 
 impl Display for Value {
@@ -14,12 +17,15 @@ impl Display for Value {
             Value::String(s) => write!(f, "{s}"),
             Value::Number(n) => write!(f, "{n}"),
             Value::Boolean(b) => write!(f, "{b}"),
+            Value::Undefined => write!(f, "undefined"),
         }
     }
 }
 
 pub fn parse_value(s: String) -> Option<Value> {
-    if s.starts_with('"') && s.ends_with('"') {
+    if s == "undefined" {
+        return Some(Value::Undefined);
+    } else if s.starts_with('"') && s.ends_with('"') {
         let out = s.strip_prefix('"').unwrap().strip_suffix('"').unwrap();
 
         return Some(Value::String(out.to_string()));

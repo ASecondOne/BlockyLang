@@ -19,7 +19,7 @@ macro_rules! debug_print {
 }
 
 fn main() {
-    let contents = read_to_string("./blocky_src/Variable.block").unwrap();
+    let contents = read_to_string("./blocky_src/FunctionsUndefined.block").unwrap();
 
     debug_print!("CONTENTS", contents);
 

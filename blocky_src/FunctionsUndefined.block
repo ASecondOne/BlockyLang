@@ -1,11 +1,13 @@
 <define>
-    let a = 6;
+    let undefined a;
 </define>
 
 <execute>
+    a = 6;
+
     println a;
 
-    a = 5;
+    a = undefined;
 
     println a;
 </execute>

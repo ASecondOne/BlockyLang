@@ -1,23 +1,23 @@
+use std::print;
+
 use crate::{
-    combi::library::Output,
-    parser::{
-        Expression,
-        value_parser::{Value, parse_value},
+    combi::library::Output, parser::{
+        Expression, value_parser::{Value, parse_value},
     },
 };
 
 #[derive(Debug, Clone)]
 pub struct Variable {
-    value: Value,
+    value: Expression,
     name: String,
 }
 
 impl Variable {
-    pub fn get_value(&mut self) -> Option<Value> {
+    pub fn get_value(&mut self) -> Option<Expression> {
         Some(self.value.clone())
     }
 
-    pub fn set_value(&mut self, value: Value) {
+    pub fn set_value(&mut self, value: Expression) {
         self.value = value;
     }
 }
@@ -51,18 +51,11 @@ impl VariableMap {
             self.variables.remove(i - 1);
         }
 
-        match expression {
-            Expression::Value(v) => {
-                self.variables.push(Variable {
-                    value: v,
-                    name: variable_name,
-                });
-                return Ok(Output::Success);
-            }
-            _ => {
-                return Err(());
-            }
-        }
+        self.variables.push(Variable {
+            value: expression,
+            name: variable_name,
+        });
+        return Ok(Output::Success);
     }
 
     pub fn get_var(&self, variable_name: &str) -> Option<Expression> {
@@ -87,6 +80,17 @@ pub fn parse_variable_expression(expression: String) -> Option<Expression> {
     let mut potential_value = String::new();
 
     let mut past = false;
+
+    let mut parts = expression.split_whitespace();
+
+    if let (Some("undefined"), Some(name), None) =
+        (parts.next(), parts.next(), parts.next())
+    {
+        return Some(Expression::VariableDefinition((
+            name.to_string(),
+            Box::new(Expression::Value(Value::Undefined)),
+        )));
+    }
 
     for char in expression.chars() {
         if char == '=' {

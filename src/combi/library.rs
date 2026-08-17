@@ -51,8 +51,7 @@ fn len(args: Expression) -> Result<Output, ()> {
                     parse_value(format!("{n}")).unwrap(),
                 )))
             }
-            Value::Number(_) => Err(()),
-            Value::Boolean(_) => Err(()),
+            _ => Err(())
         },
         _ => Err(()),
     }
@@ -61,14 +60,13 @@ fn len(args: Expression) -> Result<Output, ()> {
 fn inc_one(args: Expression) -> Result<Output, ()> {
     match args {
         Expression::Value(v) => match v {
-            Value::String(_) => Err(()),
             Value::Number(mut n) => {
                 n += 1.0;
                 Ok(Output::Expression(Expression::Value(
                     parse_value(format!("{n}")).unwrap(),
                 )))
             }
-            Value::Boolean(_) => Err(()),
+            _ => Err(())
         },
         _ => Err(()),
     }

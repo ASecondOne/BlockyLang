@@ -17,7 +17,7 @@ fn evaluate(ex: Expression, vars: &mut VariableMap) -> Result<Output, ()> {
             let variable = vars.get_pure_var(&variable_name).ok_or(())?;
             let value = variable.get_value().ok_or(())?;
 
-            Ok(Output::Expression(Expression::Value(value)))
+            Ok(Output::Expression(value))
         }
 
         Expression::None => Err(()),
@@ -42,7 +42,7 @@ fn evaluate(ex: Expression, vars: &mut VariableMap) -> Result<Output, ()> {
 
         Expression::ResetVariableValue((variable_name, value)) => {
             let value = match evaluate(*value, vars)? {
-                Output::Expression(Expression::Value(value)) => value,
+                Output::Expression(exp) => exp,
                 _ => return Err(()),
             };
 
