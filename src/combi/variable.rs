@@ -1,5 +1,3 @@
-use std::print;
-
 use crate::{
     combi::library::Output, parser::{
         Expression, value_parser::{Value, parse_value},
@@ -24,6 +22,12 @@ impl Variable {
 
 pub struct VariableMap {
     variables: Vec<Variable>,
+}
+
+impl Default for VariableMap {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl VariableMap {
@@ -55,7 +59,7 @@ impl VariableMap {
             value: expression,
             name: variable_name,
         });
-        return Ok(Output::Success);
+        Ok(Output::Success)
     }
 
     pub fn get_var(&self, variable_name: &str) -> Option<Expression> {

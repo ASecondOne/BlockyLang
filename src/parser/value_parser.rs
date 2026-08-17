@@ -1,7 +1,6 @@
 use core::fmt;
-use std::fmt::{Display, Error, Formatter, write};
+use std::fmt::{Display, Formatter};
 
-use crate::parser::Expression;
 
 #[derive(Debug, Clone)]
 pub enum Value {

@@ -36,7 +36,7 @@ impl BlockKind {
 }
 
 pub fn parse_blocks(
-    lines: &String,
+    lines: &str,
     vars: &mut VariableMap,
     filter_kind: BlockKind,
 ) -> Result<Vec<Block>, String> {
@@ -192,7 +192,7 @@ fn get_tag(text: &str) -> Option<&str> {
 }
 
 fn get_end_tag(text: &str, tag: &str) -> bool {
-    if text.find(format!("</{tag}>").as_str()).is_some() {
+    if text.contains(format!("</{tag}>").as_str()) {
         return true;
     }
 
@@ -203,9 +203,9 @@ fn get_between_tags<'a>(text: &'a str, st: &str) -> &'a str {
     let end_tag = format!("</{st}>");
     let start_tag = format!("<{st}>");
 
-    return text
+    text
         .strip_prefix(&start_tag)
         .unwrap()
         .strip_suffix(&end_tag)
-        .unwrap();
+        .unwrap()
 }
