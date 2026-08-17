@@ -1,6 +1,6 @@
-use crate::parser::{
-    parse_lines::{Expression, parse_lines},
-    variable_parser::VariableMap,
+use crate::{
+    combi::variable::VariableMap,
+    parser::parse_lines::{Expression, parse_lines},
 };
 
 #[derive(Debug)]
@@ -139,7 +139,7 @@ pub fn parse_blocks(
 #[cfg(test)]
 mod tests {
     use super::{Block, BlockKind, parse_blocks};
-    use crate::parser::{Expression, variable_parser::VariableMap};
+    use crate::{combi::variable::VariableMap, parser::Expression};
 
     const SOURCE: &str = r#"
 <define>

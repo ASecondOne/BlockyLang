@@ -1,6 +1,10 @@
 use std::fs::read_to_string;
 
-use blocky_lang::{executer::dirty_executer::execute, parser::{parse_blocks::{Block, BlockKind, parse_blocks}, variable_parser::VariableMap}};
+use blocky_lang::{
+    combi::variable::VariableMap,
+    executer::dirty_executer::execute,
+    parser::parse_blocks::{Block, BlockKind, parse_blocks},
+};
 
 pub static PRINT_DEBUG: bool = false;
 
@@ -29,11 +33,11 @@ fn main() {
                         for expression in expressions {
                             execute(expression.clone(), &mut vars);
                         }
-                    },
+                    }
                     _ => {}
                 }
             }
-        },
+        }
         Err(_er) => {}
     }
 
@@ -45,12 +49,11 @@ fn main() {
                         for expression in expressions {
                             execute(expression.clone(), &mut vars);
                         }
-                    },
+                    }
                     _ => {}
                 }
             }
-        },
+        }
         Err(_er) => {}
     }
-
 }

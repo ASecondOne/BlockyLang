@@ -24,7 +24,7 @@ pub fn parse_value(s: String) -> Option<Value> {
 
         return Some(Value::String(out.to_string()));
     } else if let Ok(value) = s.parse::<f64>() {
-        return Some(Value::Number(value))
+        return Some(Value::Number(value));
     } else if let Ok(value) = s.parse::<bool>() {
         return Some(Value::Boolean(value));
     }

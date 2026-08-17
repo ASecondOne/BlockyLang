@@ -1,10 +1,23 @@
-use crate::parser::{Expression, library::FUNCTIONS, value_parser::parse_value};
+use crate::{
+    combi::{library::FUNCTIONS, variable::VariableMap},
+    parser::{Expression, value_parser::parse_value},
+};
 
-pub fn parse_dot_notation(expression: String, exp: Expression) -> Option<Expression> {
+pub fn parse_dot_notation(
+    expression: String,
+    exp: Expression,
+    vars: &mut VariableMap,
+) -> Option<Expression> {
     let (current, rest) = split_at_dot(&expression);
 
     let parsed = match exp {
-        Expression::None => Expression::Value(parse_value(current.trim().to_string())?),
+        Expression::None => {
+            if let Some(value) = parse_value(current.trim().to_string()) {
+                Expression::Value(value)
+            } else {
+                vars.get_var(current.trim())?
+            }
+        }
         previous => {
             let function_name = current.trim();
 
@@ -17,7 +30,7 @@ pub fn parse_dot_notation(expression: String, exp: Expression) -> Option<Express
     };
 
     match rest {
-        Some(rest) if !rest.trim().is_empty() => parse_dot_notation(rest.to_string(), parsed),
+        Some(rest) if !rest.trim().is_empty() => parse_dot_notation(rest.to_string(), parsed, vars),
         Some(_) => None,
         None if matches!(parsed, Expression::Value(_)) => None,
         None => Some(parsed),

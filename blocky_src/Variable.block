@@ -1,7 +1,12 @@
 <define>
-    let a = "Hello";
+    let a = 6;
 </define>
 
 <execute>
+    println a;
+
+    a = 5;
+    a = "dd";
+
     println a;
 </execute>
