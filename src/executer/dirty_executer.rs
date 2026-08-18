@@ -13,12 +13,7 @@ pub fn execute(ex: Expression, vars: &mut VariableMap) {
 fn evaluate(ex: Expression, vars: &mut VariableMap) -> Result<Output, ()> {
     match ex {
         Expression::Value(_) => Ok(Output::Expression(ex)),
-        Expression::Variable(variable_name) => {
-            let variable = vars.get_pure_var(&variable_name).ok_or(())?;
-            let value = variable.get_value().ok_or(())?;
-
-            Ok(Output::Expression(value))
-        }
+        Expression::Variable(_) => Ok(Output::Expression(ex)),
 
         Expression::None => Err(()),
 
@@ -30,11 +25,11 @@ fn evaluate(ex: Expression, vars: &mut VariableMap) -> Result<Output, ()> {
             };
             let func = FUNCTIONS.get(func_name.as_str()).ok_or(())?;
 
-            func(argument)
+            func(argument, vars)
         }
 
-        Expression::VariableDefinition((variable_name, variable_value)) => {
-            match vars.add_new_variable(variable_name, *variable_value) {
+        Expression::VariableDefinition((variable_name, variable_type, variable_value)) => {
+            match vars.add_new_variable(variable_name, *variable_value, variable_type) {
                 Ok(o) => Ok(o),
                 Err(_) => Err(()),
             }
@@ -47,7 +42,7 @@ fn evaluate(ex: Expression, vars: &mut VariableMap) -> Result<Output, ()> {
             };
 
             let variable = vars.get_pure_var(&variable_name).ok_or(())?;
-            variable.set_value(value);
+            variable.set_value(value)?;
 
             Ok(Output::Success)
         }
@@ -58,17 +53,21 @@ fn evaluate(ex: Expression, vars: &mut VariableMap) -> Result<Output, ()> {
 mod tests {
     use super::{evaluate, execute};
     use crate::{
-        combi::{library::Output, variable::VariableMap},
+        combi::{
+            library::Output,
+            variable::{VariableMap, VariableType},
+        },
         parser::{Expression, value_parser::Value},
     };
 
     #[test]
-    fn variable_references_resolve_the_updated_value_at_execution_time() {
+    fn library_functions_resolve_the_updated_variable_value() {
         let mut vars = VariableMap::new();
 
         execute(
             Expression::VariableDefinition((
                 "a".to_string(),
+                VariableType::Number,
                 Box::new(Expression::Value(Value::Number(6.0))),
             )),
             &mut vars,
@@ -85,8 +84,19 @@ mod tests {
         );
 
         assert!(matches!(
-            evaluate(variable_reference, &mut vars),
-            Ok(Output::Expression(Expression::Value(Value::Number(value)))) if value == 5.0
+            evaluate(variable_reference.clone(), &mut vars),
+            Ok(Output::Expression(Expression::Variable(name))) if name == "a"
+        ));
+
+        assert!(matches!(
+            evaluate(
+                Expression::ChainingExpression((
+                    "inc_one()".to_string(),
+                    Box::new(variable_reference),
+                )),
+                &mut vars,
+            ),
+            Ok(Output::Expression(Expression::Value(Value::Number(value)))) if value == 6.0
         ));
     }
 }

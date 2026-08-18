@@ -1,0 +1,28 @@
+<define>
+    let a;
+    let String b;
+    let c = "c";
+    let String d = "d";
+
+</define>
+
+<execute>
+    println a.type();
+
+    a = 6;
+
+    println a;
+    println a.type();
+
+    a = undefined;
+
+    println a;
+    println a.type();
+
+    println "Type Check:";
+
+    println b.type();
+
+    println c;
+    println c.type();
+</execute>

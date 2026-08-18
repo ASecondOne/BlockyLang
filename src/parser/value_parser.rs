@@ -1,7 +1,6 @@
 use core::fmt;
 use std::fmt::{Display, Formatter};
 
-
 #[derive(Debug, Clone)]
 pub enum Value {
     String(String),

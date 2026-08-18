@@ -203,8 +203,7 @@ fn get_between_tags<'a>(text: &'a str, st: &str) -> &'a str {
     let end_tag = format!("</{st}>");
     let start_tag = format!("<{st}>");
 
-    text
-        .strip_prefix(&start_tag)
+    text.strip_prefix(&start_tag)
         .unwrap()
         .strip_suffix(&end_tag)
         .unwrap()

@@ -3,7 +3,7 @@ use std::mem::take;
 use crate::{
     combi::{
         library::FUNCTIONS,
-        variable::{VariableMap, parse_reset_variable, parse_variable_expression},
+        variable::{VariableMap, VariableType, parse_reset_variable, parse_variable_expression},
     },
     parser::{
         dot_notation_parser::parse_dot_notation,
@@ -16,7 +16,7 @@ pub enum Expression {
     Value(Value),
     Variable(String),
 
-    VariableDefinition((String, Box<Expression>)),
+    VariableDefinition((String, VariableType, Box<Expression>)),
 
     ExecutionExpression((String, Box<Expression>)),
     ChainingExpression((String, Box<Expression>)),
@@ -65,6 +65,24 @@ pub fn parse_lines(lines: Vec<&str>, vars: &mut VariableMap) -> Vec<Expression> 
         for ch in line.chars() {
             unfinished_keyword.push(ch);
 
+            if &unfinished_keyword == "let" {
+                if let Some(expression) = line.strip_prefix(&unfinished_keyword) {
+                    if let Some(exp) = parse_variable_expression(expression.trim().to_string()) {
+                        if expression
+                            .chars()
+                            .next()
+                            .is_some_and(|character| !character.is_whitespace())
+                        {
+                            continue;
+                        }
+                        // Variable set parser
+                        out.push(exp);
+
+                        continue 'lines;
+                    } 
+                } 
+            }
+
             if FUNCTIONS.contains_key(unfinished_keyword.as_str()) {
                 if let Some(expression) = line.strip_prefix(&unfinished_keyword) {
                     if expression
@@ -81,11 +99,7 @@ pub fn parse_lines(lines: Vec<&str>, vars: &mut VariableMap) -> Vec<Expression> 
                             unfinished_keyword,
                             Box::new(Expression::Value(value)),
                         )));
-                    } else if let Some(exp) =
-                        parse_variable_expression(expression.trim().to_string())
-                    {
-                        // Variable set parser
-                        out.push(exp);
+                    
                     } else if let Some(exp) =
                         parse_dot_notation(expression.trim().to_string(), Expression::None, vars)
                     // Dot Notation Parser
