@@ -4,10 +4,8 @@ use crate::{
     combi::{
         library::FUNCTIONS,
         variable::{VariableMap, VariableType, parse_reset_variable, parse_variable_expression},
-    },
-    parser::{
-        dot_notation_parser::parse_dot_notation,
-        value_parser::{Value, parse_value},
+    }, parser::{
+        conditional_parser::{Condition, condition_parse}, dot_notation_parser::parse_dot_notation, value_parser::{Value, parse_value},
     },
 };
 
@@ -23,6 +21,8 @@ pub enum Expression {
 
     ResetVariableValue((String, Box<Expression>)),
 
+    ConditionalExpression((String, Condition, Box<Expression>)),
+
     None,
 }
 
@@ -33,12 +33,20 @@ fn prepare_strings(lines: Vec<&str>) -> Vec<String> {
 
     let mut inside_string = false;
 
+    let mut open_closures: Vec<char> = Vec::new();
+
     for line in lines {
         for char in line.trim_start().chars() {
             if char == '"' {
                 inside_string = !inside_string;
             }
-            if char == ';' && !inside_string {
+            if char == '{' && !inside_string {
+                open_closures.push(char);
+            }
+            if char == '}' && !inside_string {
+                let _ = open_closures.pop();
+            }
+            if char == ';' && !inside_string && open_closures.is_empty() {
                 out.push(take(&mut unfinished_line));
             } else {
                 unfinished_line.push(char);
@@ -99,11 +107,10 @@ pub fn parse_lines(lines: Vec<&str>, vars: &mut VariableMap) -> Vec<Expression> 
                             unfinished_keyword,
                             Box::new(Expression::Value(value)),
                         )));
+                    } else if let Some(exp) = condition_parse(expression.trim().to_string(), vars) {
                     
-                    } else if let Some(exp) =
-                        parse_dot_notation(expression.trim().to_string(), Expression::None, vars)
-                    // Dot Notation Parser
-                    {
+                    } else if let Some(exp) = parse_dot_notation(expression.trim().to_string(), Expression::None, vars) {
+                        // Dot Notation Parser
                         out.push(Expression::ExecutionExpression((
                             unfinished_keyword,
                             Box::new(exp),

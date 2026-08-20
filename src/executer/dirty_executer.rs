@@ -17,6 +17,8 @@ fn evaluate(ex: Expression, vars: &mut VariableMap) -> Result<Output, ()> {
 
         Expression::None => Err(()),
 
+        Expression::ConditionalExpression(_) => Err(()),
+
         Expression::ExecutionExpression((func_name, exp))
         | Expression::ChainingExpression((func_name, exp)) => {
             let argument = match evaluate(*exp, vars)? {

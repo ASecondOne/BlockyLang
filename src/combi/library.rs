@@ -22,6 +22,7 @@ pub static FUNCTIONS: LazyLock<HashMap<&'static str, Function>> = LazyLock::new(
         ("inc_one()", inc_one as Function),
         ("let", m_let as Function),
         ("type()", m_type as Function),
+        ("if", m_if as Function),
     ])
 });
 
@@ -31,7 +32,7 @@ fn extract_value(args: Expression, vars: &mut VariableMap) -> Result<Value, ()> 
         Expression::Variable(variable_name) => {
             let variable = vars.get_pure_var(&variable_name).ok_or(())?;
 
-            match variable.get_value().ok_or(())? {
+            match variable.get_value() {
                 Expression::Value(value) => Ok(value),
                 _ => Err(()),
             }
@@ -43,7 +44,7 @@ fn extract_value(args: Expression, vars: &mut VariableMap) -> Result<Value, ()> 
 fn println(args: Expression, vars: &mut VariableMap) -> Result<Output, ()> {
     println!("{}", extract_value(args, vars)?);
     Ok(Output::Success)
-}
+} 
 
 fn print(args: Expression, vars: &mut VariableMap) -> Result<Output, ()> {
     print!("{}", extract_value(args, vars)?);
@@ -119,4 +120,8 @@ fn m_type(args: Expression, vars: &mut VariableMap) -> Result<Output, ()> {
         _ => Err(())
     }
 
+}
+
+fn m_if(exp: Expression, _vars: &mut VariableMap) -> Result<Output, ()> {
+    Err(())
 }

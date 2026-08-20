@@ -9,3 +9,6 @@
   - Store function parameters and body as an expression.
   - Support declarations such as `<function input> ... </function>`.
   - Support calls such as `a("hello")`.
+
+- [ ] Add conditions 
+  - if stuff

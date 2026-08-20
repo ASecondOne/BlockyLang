@@ -1,8 +1,8 @@
+use std::vec;
+
 use crate::{
-    combi::library::Output,
-    parser::{
-        Expression,
-        value_parser::{Value, parse_value},
+    combi::library::Output, parser::{
+        Expression, conditional_parser::condition_parse, dot_notation_parser::{self, parse_dot_notation}, parse_lines::parse_lines, value_parser::{Value, parse_value},
     },
 };
 
@@ -22,8 +22,8 @@ pub enum VariableType {
 }
 
 impl Variable {
-    pub fn get_value(&mut self) -> Option<Expression> {
-        Some(self.value.clone())
+    pub fn get_value(&mut self) -> Expression {
+        self.value.clone()
     }
 
     pub fn set_value(&mut self, value: Expression) -> Result<(), ()> {
@@ -196,9 +196,20 @@ pub fn parse_reset_variable(expression: String, vars: &mut VariableMap) -> Optio
 
     vars.get_pure_var(variable_name)?;
 
+    let mut r_value = Expression::None;
+
+    if let Some(exp) = parse_value(value.trim().to_string()) {
+        r_value = Expression::Value(exp)
+    } else if let Some(exp) = vars.get_pure_var(value.trim()) {
+        r_value = exp.get_value();
+    } else if let Some(exp) = parse_dot_notation(value.trim().to_string(), Expression::None, vars) {
+        r_value = exp;
+    }
+
+
     Some(Expression::ResetVariableValue((
         variable_name.to_string(),
-        Box::new(Expression::Value(parse_value(value.trim().to_string())?)),
+        Box::new(r_value),
     )))
 }
 
@@ -238,7 +249,7 @@ mod tests {
         );
         assert!(matches!(
             variable.get_value(),
-            Some(Expression::Value(Value::Number(value))) if value == 5.0
+            Expression::Value(Value::Number(value)) if value == 5.0
         ));
     }
 

@@ -1,0 +1,19 @@
+<define>
+    let a;
+    let String b;
+    let c;
+    let String d = "d";
+
+</define>
+
+<execute>
+    c = true != false;
+    
+    println "";
+
+    a = 6;
+
+    a = a.inc_one();
+
+    println a;
+</execute>

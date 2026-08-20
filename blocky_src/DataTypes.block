@@ -25,4 +25,6 @@
 
     println c;
     println c.type();
+
+    println "hello".type();
 </execute>
