@@ -5,7 +5,7 @@ use crate::{
         library::FUNCTIONS,
         variable::{VariableMap, VariableType, parse_reset_variable, parse_variable_expression},
     }, parser::{
-        conditional_parser::{Condition, condition_parse}, dot_notation_parser::parse_dot_notation, value_parser::{Value, parse_value},
+        conditional_parser::{Condition}, dot_notation_parser::parse_dot_notation, value_parser::{Value, parse_value},
     },
 };
 
@@ -106,9 +106,7 @@ pub fn parse_lines(lines: Vec<&str>, vars: &mut VariableMap) -> Vec<Expression> 
                         out.push(Expression::ExecutionExpression((
                             unfinished_keyword,
                             Box::new(Expression::Value(value)),
-                        )));
-                    } else if let Some(exp) = condition_parse(expression.trim().to_string(), vars) {
-                    
+                        )));                    
                     } else if let Some(exp) = parse_dot_notation(expression.trim().to_string(), Expression::None, vars) {
                         // Dot Notation Parser
                         out.push(Expression::ExecutionExpression((

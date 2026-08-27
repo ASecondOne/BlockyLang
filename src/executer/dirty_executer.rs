@@ -10,7 +10,7 @@ pub fn execute(ex: Expression, vars: &mut VariableMap) {
     let _ = evaluate(ex, vars);
 }
 
-fn evaluate(ex: Expression, vars: &mut VariableMap) -> Result<Output, ()> {
+pub fn evaluate(ex: Expression, vars: &mut VariableMap) -> Result<Output, ()> {
     match ex {
         Expression::Value(_) => Ok(Output::Expression(ex)),
         Expression::Variable(_) => Ok(Output::Expression(ex)),

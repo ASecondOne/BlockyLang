@@ -26,7 +26,7 @@ pub static FUNCTIONS: LazyLock<HashMap<&'static str, Function>> = LazyLock::new(
     ])
 });
 
-fn extract_value(args: Expression, vars: &mut VariableMap) -> Result<Value, ()> {
+pub fn extract_value(args: Expression, vars: &mut VariableMap) -> Result<Value, ()> {
     match args {
         Expression::Value(value) => Ok(value),
         Expression::Variable(variable_name) => {

@@ -1,8 +1,6 @@
-use std::vec;
-
 use crate::{
     combi::library::Output, parser::{
-        Expression, conditional_parser::condition_parse, dot_notation_parser::{self, parse_dot_notation}, parse_lines::parse_lines, value_parser::{Value, parse_value},
+        Expression, conditional_parser::{parse_condition}, dot_notation_parser::{self, parse_dot_notation}, value_parser::{Value, parse_value},
     },
 };
 
@@ -204,6 +202,8 @@ pub fn parse_reset_variable(expression: String, vars: &mut VariableMap) -> Optio
         r_value = exp.get_value();
     } else if let Some(exp) = parse_dot_notation(value.trim().to_string(), Expression::None, vars) {
         r_value = exp;
+    } else if let Some(cond) = parse_condition(value.trim().to_string(), vars) {
+
     }
 
 
