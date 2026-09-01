@@ -1,3 +1,1 @@
-pub mod combi;
-pub mod executer;
-pub mod parser;
+pub mod psycho_parser;

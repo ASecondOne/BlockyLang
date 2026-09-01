@@ -168,7 +168,7 @@ pub fn evaluate_condition(input: Condition, vars: &mut VariableMap) -> Option<Va
         },
 
         Condition::IsEqual(left, right) => {
-
+            let r_left = ev
         },
 
         _ => None,
