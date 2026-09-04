@@ -21,7 +21,7 @@ fn handle_init() {
         let src_dir = std::env::current_dir().unwrap().join("src/");
         let premade_file = std::env::current_dir().unwrap().join("src/main.block");
 
-        let _ = fs::write(blocky_toml, "[unimports]\n\n[imports]");
+        let _ = fs::write(blocky_toml, "[unimports]\n\n[imports]\nimport ALL from i_core");
 
         let _ = fs::create_dir_all(src_dir);
 
@@ -40,6 +40,9 @@ r#"<execute>
 
 fn handle_run() {
     if already_exists() {
+        // //! Currently takes every file and treats them as one file
+        // //! This might defiantly lead to problems with variables and function
+        
         let mut f_contents = Vec::new();
         
         let src_dir = std::env::current_dir().unwrap().join("src/");

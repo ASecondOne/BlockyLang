@@ -4,6 +4,6 @@
 
 <execute>
     println "Hello Block";
-</execute><execute>println 
-    "Hello 
-    Block";</execute>
+    println "Hello Block";
+    println "Hello Block";
+</execute>
