@@ -6,9 +6,7 @@ struct PsychoBlock {
 enum PsychoLine {
     Node(PsychoType),
 
-    Space,
-
-    None
+    Space
 }
 
 enum PsychoType {
@@ -46,10 +44,10 @@ fn psycho_block_parse(contents: String) -> Vec<PsychoBlock> {
             let end_block_tag = line.strip_prefix("</").unwrap().strip_suffix(">").unwrap();
 
             if end_block_tag == block_tag.unwrap() {
-                let content_between_tags = get_lines_between_tags(lines.clone(), start_tag_pos.unwrap(), i); //? Somehow get the .clone() away
+                let content_between_tags = get_lines_between_tags(&lines, start_tag_pos.unwrap(), i);
 
                 let psycho_lines: Vec<Vec<PsychoLine>> = content_between_tags.iter()
-                    .map(|c| psycho_line_parse(&mut Vec::new(), c.clone()).unwrap())
+                    .map(|c| psycho_line_parse(&mut Vec::new(), c).unwrap()) 
                     .collect();
             }
         }
@@ -58,7 +56,7 @@ fn psycho_block_parse(contents: String) -> Vec<PsychoBlock> {
     Vec::new()
 }
 
-fn psycho_line_parse(out: &mut Vec<PsychoLine>,contents: String) -> Option<Vec<PsychoLine>> {
+fn psycho_line_parse(out: &mut Vec<PsychoLine>, contents: &str) -> Option<Vec<PsychoLine>> {
     let contents = contents.trim_start();
 
     if contents.is_empty() {
@@ -115,7 +113,7 @@ fn psycho_line_parse(out: &mut Vec<PsychoLine>,contents: String) -> Option<Vec<P
         out.push(PsychoLine::Space);
     }
 
-    psycho_line_parse(out, rest.to_string())
+    psycho_line_parse(out, rest)
 }
 
 fn prep(src: &str) -> String {
@@ -163,9 +161,6 @@ fn prep(src: &str) -> String {
     out
 }
 
-fn get_lines_between_tags(lines: Vec<&str>, start: usize, end: usize) -> Vec<String> {
-    lines[start+1..end]
-        .iter()
-        .map(|s| s.to_string())
-        .collect()
+fn get_lines_between_tags<'a>(lines: &'a [&'a str], start: usize, end: usize) -> &'a [&'a str] {
+    &lines[start + 1..end]
 }
