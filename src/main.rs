@@ -21,7 +21,8 @@ fn handle_init() {
         let src_dir = std::env::current_dir().unwrap().join("src/");
         let premade_file = std::env::current_dir().unwrap().join("src/main.block");
 
-        let _ = fs::write(blocky_toml, "[unimports]\n\n[imports]\nimport ALL from i_core");
+        // //! currently does nothing
+        let _ = fs::write(blocky_toml, "[unimports]\n\n[imports]"); 
 
         let _ = fs::create_dir_all(src_dir);
 

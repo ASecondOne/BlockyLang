@@ -1,14 +1,17 @@
+#[derive(Debug)]
 struct PsychoBlock {
     block_type: String,
-    contents: Vec<PsychoLine>
+    contents: Vec<Vec<PsychoLine>>
 }
 
+#[derive(Debug)]
 enum PsychoLine {
     Node(PsychoType),
 
     Space
 }
 
+#[derive(Debug)]
 enum PsychoType {
     Unsure(Vec<PsychoLine>),
 
@@ -19,6 +22,10 @@ enum PsychoType {
 pub fn attempt_psycho_parse(file_contents: Vec<String>) {
     for c in file_contents {
         let blocks = psycho_block_parse(prep(&c));
+
+        for block in blocks {
+            println!("{:#?}", block);
+        }
     }
 
 }
@@ -26,6 +33,8 @@ pub fn attempt_psycho_parse(file_contents: Vec<String>) {
 fn psycho_block_parse(contents: String) -> Vec<PsychoBlock> {
 
     println!("{contents}");
+
+    let mut out = Vec::new();
 
     let lines: Vec<&str> = contents.split("\n").collect();
 
@@ -49,11 +58,13 @@ fn psycho_block_parse(contents: String) -> Vec<PsychoBlock> {
                 let psycho_lines: Vec<Vec<PsychoLine>> = content_between_tags.iter()
                     .map(|c| psycho_line_parse(&mut Vec::new(), c).unwrap()) 
                     .collect();
+
+                out.push(PsychoBlock { block_type: block_tag.unwrap().to_string(), contents: psycho_lines });
             }
         }
     }
 
-    Vec::new()
+    out
 }
 
 fn psycho_line_parse(out: &mut Vec<PsychoLine>, contents: &str) -> Option<Vec<PsychoLine>> {
