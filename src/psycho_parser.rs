@@ -1,33 +1,38 @@
 #[derive(Debug)]
-struct PsychoBlock {
+pub struct PsychoBlock {
     block_type: String,
     contents: Vec<Vec<PsychoLine>>
 }
 
 #[derive(Debug)]
-enum PsychoLine {
+pub enum PsychoLine {
     Node(PsychoType),
 
     Space
 }
 
 #[derive(Debug)]
-enum PsychoType {
+pub enum PsychoType {
     Unsure(Vec<PsychoLine>),
 
     Keyword(String),
     Expression(String),
 }
 
-pub fn attempt_psycho_parse(file_contents: Vec<String>) {
+pub fn attempt_psycho_parse(file_contents: Vec<String>) -> Vec<PsychoBlock> {
+    let mut out = Vec::new();
+
     for c in file_contents {
         let blocks = psycho_block_parse(prep(&c));
 
-        for block in blocks {
+        for block in &blocks {
             println!("{:#?}", block);
         }
+
+        out.extend(blocks);
     }
 
+    out
 }
 
 fn psycho_block_parse(contents: String) -> Vec<PsychoBlock> {

@@ -58,7 +58,7 @@ fn handle_run() {
             }
         }
 
-        attempt_psycho_parse(f_contents);
+        let out = attempt_psycho_parse(f_contents);
 
         return;
     }
