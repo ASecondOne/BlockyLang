@@ -1,20 +1,12 @@
 use crate::psycho_parser::PsychoBlock;
 
-pub struct Symbol {
-
+pub trait Expression {
+    fn evaluate(self) -> String;
 }
 
-pub struct ResolvedBlock {
-
-}
-
-pub enum ResolvedLine {
-    Keyword(Symbol),
-    Expression(Expression)
-}
-
-pub enum Expression {
-    Value(Option<i32>), //? Option<i32> will be changed into an module path to the Value Handler (Required)
+pub struct ExpressionParser {
+    origin: &'static str,
+    parse: fn(&str) -> Option<Box<dyn Expression>>,
 }
 
 pub fn resolve_psycho_blocks(psycho_blocks: Vec<PsychoBlock>) -> i32 {
