@@ -1,6 +1,6 @@
 use std::fs::{self, read_dir};
 
-use blocky_lang::psycho_parser::attempt_psycho_parse;
+use blocky_lang::{psycho_parser::attempt_psycho_parse, symbol_resolver::resolve_psycho_blocks};
 use colored::Colorize;
 
 fn main() {
@@ -59,6 +59,8 @@ fn handle_run() {
         }
 
         let out = attempt_psycho_parse(f_contents);
+
+        let resolved_out = resolve_psycho_blocks(out);
 
         return;
     }

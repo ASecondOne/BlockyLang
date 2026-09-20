@@ -1,7 +1,7 @@
 #[derive(Debug)]
 pub struct PsychoBlock {
-    block_type: String,
-    contents: Vec<Vec<PsychoLine>>
+    pub block_type: String,
+    pub contents: Vec<Vec<PsychoLine>>
 }
 
 #[derive(Debug)]
