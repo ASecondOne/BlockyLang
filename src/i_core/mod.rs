@@ -20,7 +20,8 @@ pub fn gather_keywords() -> Vec<Keyword> {
     let mut out = Vec::new();
 
     out.push(Keyword { 
-        name: "i_core::stdout::println".to_string(), 
+        name: "println".to_string(),
+        origin: "i_core::stdout::println".to_string(), 
         execute: println 
     });
 

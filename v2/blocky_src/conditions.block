@@ -8,11 +8,8 @@
 
 <execute>
     c = true == false;
-<<<<<<< HEAD
-=======
 
     println c;
->>>>>>> fc2534b (discard)
     
     println "";
 
