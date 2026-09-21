@@ -1,4 +1,4 @@
-use std::fs::{self, read_dir};
+use std::fs::self;
 
 use blocky_lang::{psycho_parser::attempt_psycho_parse, symbol_resolver::resolve_psycho_blocks};
 use colored::Colorize;
@@ -22,7 +22,7 @@ fn handle_init() {
         let premade_file = std::env::current_dir().unwrap().join("src/main.block");
 
         // //! currently does nothing
-        let _ = fs::write(blocky_toml, "[unimports]\n\n[imports]"); 
+        let _ = fs::write(blocky_toml, "[unimportes]\n\n[imports]"); 
 
         let _ = fs::create_dir_all(src_dir);
 

@@ -320,9 +320,15 @@ fn prep(src: &str) -> String {
         }
 
         space = false;
+
+        if c == ';' {
+            out.push('\n');
+            continue;
+        }
+
         out.push(c);
 
-        if c == '>' || c == ';' {
+        if c == '>' {
             out.push('\n');
         }
     }
