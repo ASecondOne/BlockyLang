@@ -2,6 +2,7 @@
 
 use crate::symbol_resolver::Expression;
 
+#[derive(Debug)]
 enum Value {
     String(String),
 }

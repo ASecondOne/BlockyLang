@@ -98,18 +98,29 @@ fn psycho_line_parse(contents: &str) -> Option<PsychoCall> {
 fn parse_call(contents: &str) -> Option<PsychoCall> {
     let contents = contents.trim();
 
-    // * "foo bar" form
+    // bar.foo()
+    if let Some(i) = find_top_level_dot(contents) {
+        let left = &contents[..i];
+        let right = &contents[i + 1..];
+
+        if let Some(mut call) = parse_call(right) {
+            call.expressions.insert(0, parse_expression(left));
+            return Some(call);
+        }
+    }
+
+    // foo bar
     if let Some(i) = find_top_level_space(contents) {
         let keyword = contents[..i].trim();
-        let expression = contents[i..].trim();
+        let expressions = contents[i..].trim();
 
         return Some(PsychoCall {
             keyword: keyword.to_string(),
-            expressions: vec![parse_expression(expression)],
+            expressions: parse_arguments(expressions),
         });
     }
 
-    // * "foo(bar)" form
+    // foo(bar)
     if let Some(i) = find_call_open(contents) {
         if contents.ends_with(')') {
             let keyword = contents[..i].trim();
@@ -119,19 +130,6 @@ fn parse_call(contents: &str) -> Option<PsychoCall> {
                 keyword: keyword.to_string(),
                 expressions: parse_arguments(inner),
             });
-        }
-    }
-
-    // * "bar.foo()" form
-    if let Some(i) = find_top_level_dot(contents) {
-        let left = &contents[..i];
-        let right = &contents[i + 1..];
-
-        if let Some(mut call) = parse_call(right) {
-            call.expressions
-                .insert(0, parse_expression(left));
-
-            return Some(call);
         }
     }
 
