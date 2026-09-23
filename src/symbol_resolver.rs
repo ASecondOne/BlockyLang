@@ -1,8 +1,9 @@
 use std::fmt::Debug;
+use std::sync::Arc;
 
+use crate::i_core::gather_blocktypes;
 use crate::psycho_parser::{PsychoBlock, PsychoCall, PsychoExpression};
 use crate::{i_core::{gather_expression_parsers, gather_keywords}};
-
 
 //? Used for Values and Variables
 pub trait Expression: Debug {
@@ -18,8 +19,14 @@ pub struct ExpressionParser {
 }
 
 #[derive(Debug)]
+pub struct BlockType {
+    pub name: String,
+    pub execution_order: usize,
+}
+
+#[derive(Debug)]
 pub struct ResolvedBlock {
-    pub block_type: String, // //! currently does nothing, later hast to be resolved into an concrete block type
+    pub block_type: Arc<BlockType>,
     pub resolved_lines: Vec<ResolvedExpression>
 }
 
@@ -37,43 +44,64 @@ pub struct KeywordCall {
 
 #[derive(Clone, Debug)]
 pub struct Keyword {
-    pub name: String,
     pub origin: String,
     pub execute: fn(Box<dyn Expression>) -> Option<Box<dyn Expression>>, //? Alter result into an actual Result, and make OK the Option<...>
 }
 
-pub fn resolve_psycho_blocks(psycho_blocks: Vec<PsychoBlock>) {
+pub fn resolve_psycho_blocks(psycho_blocks: Vec<PsychoBlock>) -> Vec<ResolvedBlock> {
+    let block_types = gather_blocktypes();
+
+    let mut out = Vec::new();
+
     for psycho_block in psycho_blocks {
-        let _block_type = psycho_block.block_type; // //! currently does nothing, later hast to be resolved into an concrete block type
+        let block_type = psycho_block.block_type;
         let contents = psycho_block.contents;
 
-        for content in contents {
-            if let Some(resolved_line) = resolve_individual_line(content) {
-                println!("{:#?}", resolved_line)
-            }
-        }
+        let resolved_block_type = block_types.iter().find(|b| b.name == block_type).unwrap().clone();
+
+        let resolved_contents: Vec<ResolvedExpression> = contents
+            .iter()
+            .map(|content| resolve_individual_line(content))
+            .filter_map(|option|
+                match option {
+                    Some(s) => Some(s),
+                    None => None
+                }
+            )
+            .collect();
+
+        let resolved_block = ResolvedBlock {
+            block_type: resolved_block_type,
+            resolved_lines: resolved_contents
+        };
+
+        println!("{:#?}", resolved_block);
+
+        out.push(resolved_block);
     }
+
+    out
 }
 
-fn resolve_individual_line(input: PsychoCall) -> Option<ResolvedExpression> {
+fn resolve_individual_line(input: &PsychoCall) -> Option<ResolvedExpression> {
     let available_keywords = gather_keywords();
     let mut resolved_expressions = Vec::new();
 
-    for expression in input.expressions {
+    for expression in &input.expressions {
         match expression {
             PsychoExpression::Call(c) => {
-                resolved_expressions.push(resolve_individual_line(c)?);
+                resolved_expressions.push(resolve_individual_line(&c)?);
             }
 
             PsychoExpression::Expression(e) => {
-                resolved_expressions.push(resolve_expressions(e)?);
+                resolved_expressions.push(resolve_expressions(&e)?);
             }
         }
     }
 
     let keyword = available_keywords
         .into_iter()
-        .find(|k| k.name == input.keyword)?;
+        .find(|k| k.origin.contains(&input.keyword))?;
 
     Some(ResolvedExpression::KeywordCall(KeywordCall {
         keyword,
@@ -81,13 +109,13 @@ fn resolve_individual_line(input: PsychoCall) -> Option<ResolvedExpression> {
     }))
 }
 
-fn resolve_expressions(input: String) -> Option<ResolvedExpression> {
+fn resolve_expressions(input: &str) -> Option<ResolvedExpression> {
     let expression_parsers = gather_expression_parsers();
 
     let mut possible_expressions: Vec<Box<dyn Expression>> = Vec::new();
 
     for parser in expression_parsers {
-        if let Some(exp) = (parser.parse)(&input) {
+        if let Some(exp) = (parser.parse)(input) {
             possible_expressions.push(exp);
         }
     }

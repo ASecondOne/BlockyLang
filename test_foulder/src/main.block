@@ -1,4 +1,3 @@
-
 <execute>
     println "a", "b";
     println("a", "b");
@@ -7,4 +6,6 @@
     println "a", println "b";
     println("a", println("b"));
     "a".println("b").println("c");
+
+    stdout::println "c";
 </execute>
