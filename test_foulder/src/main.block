@@ -1,11 +1,7 @@
 <execute>
-    println "a", "b";
-    println("a", "b");
-    "a".println("b");
+    println "Hello Block";
 
-    println "a", println "b";
-    println("a", println("b"));
-    "a".println("b").println("c");
+    println("Hello Block");
 
-    stdout::println "c";
+    "Hello World".println();
 </execute>

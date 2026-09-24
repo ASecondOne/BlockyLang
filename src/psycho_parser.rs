@@ -20,21 +20,13 @@ pub fn attempt_psycho_parse(file_contents: Vec<String>) -> Vec<PsychoBlock> {
     let mut out = Vec::new();
 
     for c in file_contents {
-        let blocks = psycho_block_parse(prep(&c));
-
-        for block in &blocks {
-            println!("{:#?}", block);
-        }
-
-        out.extend(blocks);
+        out.extend(psycho_block_parse(prep(&c)));
     }
 
     out
 }
 
 fn psycho_block_parse(contents: String) -> Vec<PsychoBlock> {
-    println!("{contents}");
-
     let mut out = Vec::new();
     let lines: Vec<&str> = contents.split("\n").collect();
 

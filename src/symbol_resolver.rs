@@ -45,7 +45,7 @@ pub struct KeywordCall {
 #[derive(Clone, Debug)]
 pub struct Keyword {
     pub origin: String,
-    pub execute: fn(Box<dyn Expression>) -> Option<Box<dyn Expression>>, //? Alter result into an actual Result, and make OK the Option<...>
+    pub execute: fn(Vec<Box<dyn Expression>>) -> Option<Box<dyn Expression>>, //? Alter result into an actual Result, and make OK the Option<...>
 }
 
 pub fn resolve_psycho_blocks(psycho_blocks: Vec<PsychoBlock>) -> Vec<ResolvedBlock> {
@@ -74,8 +74,6 @@ pub fn resolve_psycho_blocks(psycho_blocks: Vec<PsychoBlock>) -> Vec<ResolvedBlo
             block_type: resolved_block_type,
             resolved_lines: resolved_contents
         };
-
-        println!("{:#?}", resolved_block);
 
         out.push(resolved_block);
     }
