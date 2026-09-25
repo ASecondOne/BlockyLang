@@ -3,5 +3,5 @@
 
     println("Hello Block");
 
-    "Hello World".println();
+    69.inc_one().println();
 </execute>

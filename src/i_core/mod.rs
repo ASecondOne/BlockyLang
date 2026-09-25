@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
-use crate::{i_core::{stdout::println, value::expression_parser}, symbol_resolver::{BlockType, ExpressionParser, Keyword}};
+use crate::{i_core::{math::inc_one, stdout::println, value::expression_parser}, symbol_resolver::{BlockType, ExpressionParser, Keyword}};
 
 mod value;
+mod math;
 mod stdout;
 
 pub fn gather_expression_parsers() -> Vec<ExpressionParser> {
@@ -24,6 +25,11 @@ pub fn gather_keywords() -> Vec<Keyword> {
     out.push(Keyword { 
         origin: "i_core::stdout::println".to_string(), 
         execute: println 
+    });
+
+    out.push(Keyword { 
+        origin: "i_core::math::inc_one".to_string(), 
+        execute: inc_one 
     });
 
     out

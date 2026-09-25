@@ -1,6 +1,8 @@
+use std::any::Any;
 use std::fmt::Debug;
 use std::sync::Arc;
 
+use crate::executers::ExcuterOutput;
 use crate::i_core::gather_blocktypes;
 use crate::psycho_parser::{PsychoBlock, PsychoCall, PsychoExpression};
 use crate::{i_core::{gather_expression_parsers, gather_keywords}};
@@ -9,6 +11,7 @@ use crate::{i_core::{gather_expression_parsers, gather_keywords}};
 pub trait Expression: Debug {
     fn evaluate(self: Box<Self>) -> Option<Box<dyn Expression>>;
     fn display(self: Box<Self>) -> Option<String>;
+    fn as_any(&self) -> &dyn Any;
 }
 
 //? Used to Parse everything that implements Expression
@@ -45,7 +48,7 @@ pub struct KeywordCall {
 #[derive(Clone, Debug)]
 pub struct Keyword {
     pub origin: String,
-    pub execute: fn(Vec<Box<dyn Expression>>) -> Option<Box<dyn Expression>>, //? Alter result into an actual Result, and make OK the Option<...>
+    pub execute: fn(Vec<Box<dyn Expression>>) -> ExcuterOutput
 }
 
 pub fn resolve_psycho_blocks(psycho_blocks: Vec<PsychoBlock>) -> Vec<ResolvedBlock> {
