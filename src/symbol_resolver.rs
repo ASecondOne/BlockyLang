@@ -24,6 +24,8 @@ pub struct ExpressionParser {
 #[derive(Debug)]
 pub struct BlockType {
     pub name: String,
+    pub symbol_blacklist: Vec<String>,
+    pub symbol_whitelist: Vec<String>,
     pub execution_order: usize,
 }
 
@@ -84,7 +86,7 @@ pub fn resolve_psycho_blocks(psycho_blocks: Vec<PsychoBlock>) -> Vec<ResolvedBlo
     out
 }
 
-fn resolve_individual_line(input: &PsychoCall) -> Option<ResolvedExpression> {
+fn resolve_individual_line(input: &PsychoCall, block_type: BlockType) -> Option<ResolvedExpression> {
     let available_keywords = gather_keywords();
     let mut resolved_expressions = Vec::new();
 
