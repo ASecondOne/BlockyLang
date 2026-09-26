@@ -44,7 +44,7 @@ pub fn gather_blocktypes() -> Vec<Arc<BlockType>> {
 
     out.push(Arc::new(BlockType {
         name: "execute".to_string(),
-        symbol_blacklist: vec!["let".to_string()],
+        symbol_blacklist: vec!["i_core::datastore::var::let".to_string()],
         symbol_whitelist: vec![],
         execution_order: 2,
     }));
@@ -52,7 +52,7 @@ pub fn gather_blocktypes() -> Vec<Arc<BlockType>> {
     out.push(Arc::new(BlockType {
         name: "define".to_string(),
         symbol_blacklist: vec![],
-        symbol_whitelist: vec!["let".to_string()],
+        symbol_whitelist: vec!["i_core::datastore::var::let".to_string()],
         execution_order: 1,
     }));
 

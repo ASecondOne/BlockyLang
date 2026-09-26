@@ -66,7 +66,7 @@ pub fn resolve_psycho_blocks(psycho_blocks: Vec<PsychoBlock>) -> Vec<ResolvedBlo
 
         let resolved_contents: Vec<ResolvedExpression> = contents
             .iter()
-            .map(|content| resolve_individual_line(content))
+            .map(|content| resolve_individual_line(content, &resolved_block_type))
             .filter_map(|option|
                 match option {
                     Some(s) => Some(s),
@@ -86,14 +86,14 @@ pub fn resolve_psycho_blocks(psycho_blocks: Vec<PsychoBlock>) -> Vec<ResolvedBlo
     out
 }
 
-fn resolve_individual_line(input: &PsychoCall, block_type: BlockType) -> Option<ResolvedExpression> {
+fn resolve_individual_line(input: &PsychoCall, block_type: &BlockType) -> Option<ResolvedExpression> {
     let available_keywords = gather_keywords();
     let mut resolved_expressions = Vec::new();
 
     for expression in &input.expressions {
         match expression {
             PsychoExpression::Call(c) => {
-                resolved_expressions.push(resolve_individual_line(&c)?);
+                resolved_expressions.push(resolve_individual_line(&c, block_type)?);
             }
 
             PsychoExpression::Expression(e) => {
@@ -104,7 +104,19 @@ fn resolve_individual_line(input: &PsychoCall, block_type: BlockType) -> Option<
 
     let keyword = available_keywords
         .into_iter()
-        .find(|k| k.origin.contains(&input.keyword))?;
+        .find(|k| {
+            let matches = k.origin.contains(&input.keyword);
+
+            let whitelisted = block_type.symbol_whitelist
+                .iter()
+                .any(|s| k.origin.starts_with(s));
+
+            let blacklisted = block_type.symbol_blacklist
+                .iter()
+                .any(|s| k.origin.starts_with(s));
+
+            matches && whitelisted && !blacklisted
+        })?;
 
     Some(ResolvedExpression::KeywordCall(KeywordCall {
         keyword,
