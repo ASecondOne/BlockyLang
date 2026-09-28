@@ -5,7 +5,7 @@
 <execute>
     println a;
 
-    a = 7;
+    a = 7.inc_one();
 
     println a;
 </execute>

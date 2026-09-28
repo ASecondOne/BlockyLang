@@ -25,16 +25,25 @@ impl Expression for Variable {
     }
 
     fn redirect(&mut self, new: SharedExpression) -> ExcuterOutput {
-        if let Some(new_value) = new.lock().unwrap().as_any().downcast_ref::<Value>() {
+        let new = match new.lock() {
+            Ok(new) => new,
+            Err(_) => return ExcuterOutput::Error("Could not lock redirect value".to_string()),
+        };
+
+        if let Some(new_value) = new.as_any().downcast_ref::<Value>() {
             self.value = new_value.clone(); // //! Somehow get rid of clone
             return ExcuterOutput::ValidNone;
-        } 
+        }
         
-        ExcuterOutput::Error("Problem".to_string())
+        ExcuterOutput::Error("A variable can only receive a value".to_string())
     }
 }
 
 pub fn i_let(mut args: Vec<SharedExpression>) -> ExcuterOutput {
+    if args.is_empty() {
+        return ExcuterOutput::Error("`let` requires a variable name".to_string());
+    }
+
     let arg = args.remove(0);
 
     let is_variable = arg
@@ -46,5 +55,5 @@ pub fn i_let(mut args: Vec<SharedExpression>) -> ExcuterOutput {
         return ExcuterOutput::ValidSome(arg);
     }
 
-    ExcuterOutput::ValidNone
+    ExcuterOutput::Error("`let` requires a variable name".to_string())
 }

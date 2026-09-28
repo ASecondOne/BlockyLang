@@ -40,7 +40,7 @@ impl Expression for Value {
     }
 
     fn redirect(&mut self, _: SharedExpression) -> crate::executers::ExcuterOutput {
-        crate::executers::ExcuterOutput::Error("Cant redirect into Value".to_string())
+        crate::executers::ExcuterOutput::Error("Cannot redirect into a value".to_string())
     }
 }
 

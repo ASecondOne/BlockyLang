@@ -2,6 +2,8 @@ use std::any::Any;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
+use colored::Colorize;
+
 use crate::executers::ExcuterOutput;
 use crate::i_core::{gather_blocktypes, gather_expression_parsers, gather_keywords};
 use crate::psychoparser::psycho_parser::{PsychoBlock, PsychoCall, PsychoExpression};
@@ -56,25 +58,48 @@ pub struct Keyword {
     pub execute: fn(Vec<SharedExpression>) -> ExcuterOutput,
 }
 
-pub fn resolve_psycho_blocks(psycho_blocks: Vec<PsychoBlock>) -> Vec<ResolvedBlock> {
+pub fn resolve_psycho_blocks(psycho_blocks: Vec<PsychoBlock>) -> Result<Vec<ResolvedBlock>, ()> {
     let block_types = gather_blocktypes();
 
     let mut out = Vec::new();
+    let mut had_errors = false;
 
     for psycho_block in psycho_blocks {
         let block_type = psycho_block.block_type;
         let contents = psycho_block.contents;
 
-        let resolved_block_type = block_types
+        let Some(resolved_block_type) = block_types
             .iter()
             .find(|b| b.name == block_type)
-            .unwrap()
-            .clone();
+            .cloned()
+        else {
+            eprintln!(
+                "{}",
+                format!("Resolver error: Unknown block type `<{block_type}>`").red()
+            );
+            had_errors = true;
+            continue;
+        };
 
         let resolved_contents: Vec<ResolvedExpression> = contents
             .iter()
-            .filter_map(|content| {
-                resolve_individual_line(content, &resolved_block_type)
+            .enumerate()
+            .filter_map(|(line, content)| {
+                match resolve_individual_line(content, &resolved_block_type) {
+                    Ok(expression) => Some(expression),
+                    Err(message) => {
+                        eprintln!(
+                            "{}",
+                            format!(
+                                "Resolver error in `<{block_type}>` expression {}: {message}",
+                                line + 1
+                            )
+                            .red()
+                        );
+                        had_errors = true;
+                        None
+                    }
+                }
             })
             .collect();
 
@@ -84,10 +109,10 @@ pub fn resolve_psycho_blocks(psycho_blocks: Vec<PsychoBlock>) -> Vec<ResolvedBlo
         });
     }
 
-    out
+    if had_errors { Err(()) } else { Ok(out) }
 }
 
-fn resolve_individual_line(input: &PsychoExpression, block_type: &BlockType) -> Option<ResolvedExpression> {
+fn resolve_individual_line(input: &PsychoExpression, block_type: &BlockType) -> Result<ResolvedExpression, String> {
     match input {
         PsychoExpression::Expression(e) => {
             resolve_expressions(e)
@@ -98,7 +123,7 @@ fn resolve_individual_line(input: &PsychoExpression, block_type: &BlockType) -> 
         }
 
         PsychoExpression::Redirect(into, from) => {
-            Some(ResolvedExpression::Redirect(
+            Ok(ResolvedExpression::Redirect(
                 Box::new(resolve_individual_line(into, block_type)?),
                 Box::new(resolve_individual_line(from, block_type)?),
             ))
@@ -106,26 +131,32 @@ fn resolve_individual_line(input: &PsychoExpression, block_type: &BlockType) -> 
     }
 }
 
-fn resolve_call(input: &PsychoCall, block_type: &BlockType) -> Option<ResolvedExpression> {
+fn resolve_call(input: &PsychoCall, block_type: &BlockType) -> Result<ResolvedExpression, String> {
     let available_keywords = gather_keywords();
 
     let resolved_expressions: Vec<ResolvedExpression> = input
         .expressions
         .iter()
         .map(|expression| resolve_individual_line(expression, block_type))
-        .collect::<Option<Vec<_>>>()?;
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let matching_keyword = available_keywords
+        .iter()
+        .find(|keyword| keyword.origin.contains(&input.keyword));
+
+    if matching_keyword.is_none() {
+        return Err(format!("Unknown keyword `{}`", input.keyword));
+    }
 
     let keyword = available_keywords
         .into_iter()
         .find(|k| {
             let matches = k.origin.contains(&input.keyword);
 
-            let mut whitelisted = block_type
+            let whitelisted = block_type.symbol_whitelist.is_empty() || block_type
                 .symbol_whitelist
                 .iter()
                 .any(|s| k.origin.contains(s));
-
-            if block_type.symbol_whitelist.is_empty() {whitelisted = true}
 
             let blacklisted = block_type
                 .symbol_blacklist
@@ -133,15 +164,21 @@ fn resolve_call(input: &PsychoCall, block_type: &BlockType) -> Option<ResolvedEx
                 .any(|s| k.origin.contains(s));
 
             matches && whitelisted && !blacklisted
+        })
+        .ok_or_else(|| {
+            format!(
+                "Keyword `{}` is not allowed in `<{}>` blocks",
+                input.keyword, block_type.name
+            )
         })?;
 
-    Some(ResolvedExpression::KeywordCall(KeywordCall {
+    Ok(ResolvedExpression::KeywordCall(KeywordCall {
         keyword,
         args: resolved_expressions,
     }))
 }
 
-fn resolve_expressions(input: &str) -> Option<ResolvedExpression> {
+fn resolve_expressions(input: &str) -> Result<ResolvedExpression, String> {
     let expression_parsers = gather_expression_parsers();
 
     let mut possible_expressions: Vec<SharedExpression> = Vec::new();
@@ -154,10 +191,10 @@ fn resolve_expressions(input: &str) -> Option<ResolvedExpression> {
 
     if !possible_expressions.is_empty() {
         // //! Only takes first possible expression, needs to be changed.
-        return Some(ResolvedExpression::Expression(
+        return Ok(ResolvedExpression::Expression(
             possible_expressions.remove(0),
         ));
     }
 
-    None
+    Err(format!("Could not parse expression `{input}`"))
 }

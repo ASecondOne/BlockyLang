@@ -1,3 +1,5 @@
+use colored::Colorize;
+
 use crate::psychoparser::top_level_finder::{find_top_level_dot, find_top_level_redirect, find_top_level_space};
 
 #[derive(Debug)]
@@ -19,18 +21,22 @@ pub enum PsychoExpression {
     Redirect(Box<PsychoExpression>, Box<PsychoExpression>),
 }
 
-pub fn attempt_psycho_parse(file_contents: Vec<String>) -> Vec<PsychoBlock> {
+pub fn attempt_psycho_parse(file_contents: Vec<String>) -> Result<Vec<PsychoBlock>, ()> {
     let mut out = Vec::new();
+    let mut had_errors = false;
 
     for c in file_contents {
-        out.extend(psycho_block_parse(prep(&c)));
+        let (blocks, file_had_errors) = psycho_block_parse(prep(&c));
+        out.extend(blocks);
+        had_errors |= file_had_errors;
     }
 
-    out
+    if had_errors { Err(()) } else { Ok(out) }
 }
 
-fn psycho_block_parse(contents: String) -> Vec<PsychoBlock> {
+fn psycho_block_parse(contents: String) -> (Vec<PsychoBlock>, bool) {
     let mut out = Vec::new();
+    let mut had_errors = false;
     let lines: Vec<&str> = contents.split("\n").collect();
 
     let mut block_tag: Option<&str> = None;
@@ -38,52 +44,124 @@ fn psycho_block_parse(contents: String) -> Vec<PsychoBlock> {
 
     for (i, line) in lines.iter().enumerate() {
         if line.starts_with("<") && line.ends_with(">") && !line.starts_with("</") {
-            block_tag = Some(
-                line.strip_prefix("<")
-                    .unwrap()
-                    .strip_suffix(">")
-                    .unwrap(),
-            );
+            if let Some(open_tag) = block_tag {
+                parse_error(format!(
+                    "Found `<{}>` before `<{open_tag}>` was closed",
+                    &line[1..line.len() - 1]
+                ));
+                had_errors = true;
+                continue;
+            }
 
+            block_tag = Some(&line[1..line.len() - 1]);
             start_tag_pos = Some(i);
+            continue;
         }
 
-        if line.starts_with("</") && line.ends_with(">") && block_tag.is_some() {
-            // TODO: Make psycho parser return in case of a start-less end tag
-            let end_block_tag = line
-                .strip_prefix("</")
-                .unwrap()
-                .strip_suffix(">")
-                .unwrap();
+        if line.starts_with("</") && line.ends_with(">") {
+            let end_block_tag = &line[2..line.len() - 1];
 
-            if end_block_tag == block_tag.unwrap() {
-                let content_between_tags =
-                    get_lines_between_tags(&lines, start_tag_pos.unwrap(), i);
+            let Some(open_tag) = block_tag else {
+                parse_error(format!("Found closing tag `</{end_block_tag}>` without an opening tag"));
+                had_errors = true;
+                continue;
+            };
 
-                let psycho_lines: Vec<PsychoExpression> = content_between_tags
-                    .iter()
-                    .filter_map(|line| psycho_line_parse(line))
-                    .collect();
-
-                out.push(PsychoBlock {
-                    block_type: block_tag.unwrap().to_string(),
-                    contents: psycho_lines,
-                });
+            if end_block_tag != open_tag {
+                parse_error(format!(
+                    "Closing tag `</{end_block_tag}>` does not match `<{open_tag}>`"
+                ));
+                had_errors = true;
+                continue;
             }
+
+            let content_between_tags =
+                get_lines_between_tags(&lines, start_tag_pos.unwrap(), i);
+
+            let mut psycho_lines: Vec<PsychoExpression> = Vec::new();
+
+            for line in content_between_tags {
+                match psycho_line_parse(line) {
+                    Ok(Some(expression)) => psycho_lines.push(expression),
+                    Ok(None) => {}
+                    Err(()) => had_errors = true,
+                }
+            }
+
+            out.push(PsychoBlock {
+                block_type: open_tag.to_string(),
+                contents: psycho_lines,
+            });
+
+            block_tag = None;
+            start_tag_pos = None;
         }
     }
 
-    out
+    if let Some(open_tag) = block_tag {
+        parse_error(format!("Block `<{open_tag}>` has no closing tag"));
+        had_errors = true;
+    }
+
+    (out, had_errors)
 }
 
-fn psycho_line_parse(contents: &str) -> Option<PsychoExpression> {
+fn psycho_line_parse(contents: &str) -> Result<Option<PsychoExpression>, ()> {
     let contents = contents.trim();
 
     if contents.is_empty() {
-        return None;
+        return Ok(None);
     }
 
-    Some(parse_expression(contents))
+    if let Err(message) = validate_expression_syntax(contents) {
+        parse_error(format!("Invalid expression `{contents}`: {message}"));
+        return Err(());
+    }
+
+    Ok(Some(parse_expression(contents)))
+}
+
+fn validate_expression_syntax(contents: &str) -> Result<(), String> {
+    let mut string = false;
+    let mut depth = 0usize;
+
+    for c in contents.chars() {
+        if c == '"' {
+            string = !string;
+            continue;
+        }
+
+        if string {
+            continue;
+        }
+
+        match c {
+            '(' => depth += 1,
+            ')' if depth == 0 => return Err("unexpected `)`".to_string()),
+            ')' => depth -= 1,
+            _ => {}
+        }
+    }
+
+    if string {
+        return Err("unclosed string".to_string());
+    }
+
+    if depth != 0 {
+        return Err("unclosed `(`".to_string());
+    }
+
+    if let Some(i) = find_top_level_redirect(contents) {
+        if contents[..i].trim().is_empty() || contents[i + 1..].trim().is_empty() {
+            return Err("redirect requires expressions on both sides of `=`".to_string());
+        }
+    }
+
+    Ok(())
+}
+
+fn parse_error(message: String) {
+    eprintln!("{}", format!("Parse error: {message}").red());
 }
 
 // Parses either:

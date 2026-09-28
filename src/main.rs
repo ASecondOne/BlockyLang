@@ -1,7 +1,7 @@
 use std::fs::self;
 use colored::Colorize;
 
-use blocky_lang::{executers::dirty_executer::dirty_executer, psychoparser::psycho_parser::attempt_psycho_parse, symbol_resolver::resolve_psycho_blocks};
+use blocky_lang::{executers::executer::executer, psychoparser::psycho_parser::attempt_psycho_parse, symbol_resolver::resolve_psycho_blocks};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -9,7 +9,7 @@ fn main() {
     if let Some(arg) = args.get(1) {
         match arg.as_str() {
             "init" => handle_init(),
-            "run" => handle_run(),
+            "run" => handle_run(args),
             _ => println!("{}", format!("Unknown Command: {}", arg).red()),
         }
     }
@@ -39,10 +39,22 @@ r#"<execute>
     println!("{}", format!("Project already exists").red())
 }
 
-fn handle_run() {
+fn handle_run(args: Vec<String>) {
     if already_exists() {
         // //! Currently takes every file and treats them as one file
         // //! This might defiantly lead to problems with variables and function
+
+        let mut debug = false;
+
+        if let Some(arg) = args.get(2) {
+            match arg.as_str() {
+                "--debug" => debug = true,
+                _ => {
+                    println!("{}", format!("Unkown argument {} for run", arg).red());
+                    std::process::exit(1);
+                }
+            }
+        }
         
         let mut f_contents = Vec::new();
         
@@ -58,19 +70,32 @@ fn handle_run() {
             }
         }
 
-        let out = attempt_psycho_parse(f_contents);
+        let out = match attempt_psycho_parse(f_contents) {
+            Ok(out) => out,
+            Err(()) => std::process::exit(1),
+        };
 
-        println!("{:#?}", out);
 
-        println!("\n|---------------------------------|\n");
+        if debug {
+            println!("\n|----------------PsyhoAST-----------------|\n");
 
-        let resolved_out = resolve_psycho_blocks(out);
+            println!("{:#?}", out);
 
-        println!("{:#?}", resolved_out);
+            println!("\n|----------------ResolvedAST-----------------|\n");
+        }
 
-        println!("\n|---------------------------------|\n");
+        let resolved_out = match resolve_psycho_blocks(out) {
+            Ok(out) => out,
+            Err(()) => std::process::exit(1),
+        };
 
-        dirty_executer(resolved_out);
+        if debug {
+            println!("{:#?}", resolved_out);
+
+            println!("\n|----------------Output-----------------|\n");
+        }
+
+        executer(resolved_out);
 
         return;
     }
