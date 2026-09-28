@@ -1,4 +1,4 @@
-use crate::{executers::ExcuterOutput::{self, ValidNone, ValidSome}, symbol_resolver::{Expression, ResolvedBlock, ResolvedExpression}};
+use crate::{executers::ExcuterOutput::{self, Error, ValidNone, ValidSome}, symbol_resolver::{ResolvedBlock, ResolvedExpression, SharedExpression}};
 
 pub fn dirty_executer(input: Vec<ResolvedBlock>) {
     for block in input {
@@ -18,7 +18,7 @@ fn execute(input: ResolvedExpression) -> ExcuterOutput {
                 .map(execute)
                 .collect();
 
-            let args: Vec<Box<dyn Expression>> = args
+            let args: Vec<SharedExpression> = args
                 .into_iter()
                 .filter_map(|a| match a {
                     ValidSome(e) => Some(e),
@@ -28,6 +28,25 @@ fn execute(input: ResolvedExpression) -> ExcuterOutput {
                 .collect();
 
             (k.keyword.execute)(args)
+        },
+
+        ResolvedExpression::Redirect(into, from) => {
+            let out_into = execute(*into);
+            let out_from = execute(*from);
+
+            match out_into {
+                ValidNone => {}
+                ValidSome(e) => {}
+                Error(_) => {}
+            }
+
+            match out_from {
+                ValidNone => {}
+                ValidSome(e) => {}
+                Error(_) => {}
+            }
+
+            ValidNone
         }
     }
 }

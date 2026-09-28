@@ -1,12 +1,14 @@
 // Path: i_core::stdout::*
 
-use crate::{executers::ExcuterOutput, i_core::value::Value, symbol_resolver::Expression};
+use std::sync::{Arc, Mutex};
 
-pub fn inc_one(mut args: Vec<Box<dyn Expression>>) -> ExcuterOutput {
+use crate::{executers::ExcuterOutput, i_core::value::Value, symbol_resolver::SharedExpression};
+
+pub fn inc_one(mut args: Vec<SharedExpression>) -> ExcuterOutput {
     let arg = args.remove(0);
 
-    if let Some(Value::Number(n)) = arg.as_any().downcast_ref::<Value>() {
-        return ExcuterOutput::ValidSome(Box::new(Value::Number(n + 1)));
+    if let Some(Value::Number(n)) = arg.lock().unwrap().as_any().downcast_ref::<Value>() {
+        return ExcuterOutput::ValidSome(Arc::new(Mutex::new(Value::Number(n + 1))));
     }
 
     ExcuterOutput::ValidNone

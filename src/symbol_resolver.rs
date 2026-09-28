@@ -1,24 +1,26 @@
 use std::any::Any;
 use std::fmt::Debug;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use crate::executers::ExcuterOutput;
-use crate::i_core::gather_blocktypes;
-use crate::psycho_parser::{PsychoBlock, PsychoCall, PsychoExpression};
-use crate::{i_core::{gather_expression_parsers, gather_keywords}};
+use crate::i_core::{gather_blocktypes, gather_expression_parsers, gather_keywords};
+use crate::psychoparser::psycho_parser::{PsychoBlock, PsychoCall, PsychoExpression};
 
 //? Used for Values and Variables
-pub trait Expression: Debug {
-    fn evaluate(self: Box<Self>) -> Option<Box<dyn Expression>>;
-    fn display(self: Box<Self>) -> Option<String>;
+pub trait Expression: Debug + Send {
+    fn evaluate(&self) -> Option<SharedExpression>;
+    fn display(&self) -> Option<String>;
     fn as_any(&self) -> &dyn Any;
+    fn redirect(&mut self, new: SharedExpression) -> ExcuterOutput;
 }
+
+pub type SharedExpression = Arc<Mutex<dyn Expression>>;
 
 //? Used to Parse everything that implements Expression
 #[derive(Debug)]
 pub struct ExpressionParser {
     pub origin: &'static str,
-    pub parse: fn(&str) -> Option<Box<dyn Expression>>,
+    pub parse: fn(&str) -> Option<SharedExpression>,
 }
 
 #[derive(Debug)]
@@ -32,13 +34,14 @@ pub struct BlockType {
 #[derive(Debug)]
 pub struct ResolvedBlock {
     pub block_type: Arc<BlockType>,
-    pub resolved_lines: Vec<ResolvedExpression>
+    pub resolved_lines: Vec<ResolvedExpression>,
 }
 
 #[derive(Debug)]
 pub enum ResolvedExpression {
-    Expression(Box<dyn Expression>),
+    Expression(SharedExpression),
     KeywordCall(KeywordCall),
+    Redirect(Box<ResolvedExpression>, Box<ResolvedExpression>),
 }
 
 #[derive(Debug)]
@@ -50,7 +53,7 @@ pub struct KeywordCall {
 #[derive(Clone, Debug)]
 pub struct Keyword {
     pub origin: String,
-    pub execute: fn(Vec<Box<dyn Expression>>) -> ExcuterOutput
+    pub execute: fn(Vec<SharedExpression>) -> ExcuterOutput,
 }
 
 pub fn resolve_psycho_blocks(psycho_blocks: Vec<PsychoBlock>) -> Vec<ResolvedBlock> {
@@ -62,58 +65,70 @@ pub fn resolve_psycho_blocks(psycho_blocks: Vec<PsychoBlock>) -> Vec<ResolvedBlo
         let block_type = psycho_block.block_type;
         let contents = psycho_block.contents;
 
-        let resolved_block_type = block_types.iter().find(|b| b.name == block_type).unwrap().clone();
+        let resolved_block_type = block_types
+            .iter()
+            .find(|b| b.name == block_type)
+            .unwrap()
+            .clone();
 
         let resolved_contents: Vec<ResolvedExpression> = contents
             .iter()
-            .map(|content| resolve_individual_line(content, &resolved_block_type))
-            .filter_map(|option|
-                match option {
-                    Some(s) => Some(s),
-                    None => None
-                }
-            )
+            .filter_map(|content| {
+                resolve_individual_line(content, &resolved_block_type)
+            })
             .collect();
 
-        let resolved_block = ResolvedBlock {
+        out.push(ResolvedBlock {
             block_type: resolved_block_type,
-            resolved_lines: resolved_contents
-        };
-
-        out.push(resolved_block);
+            resolved_lines: resolved_contents,
+        });
     }
 
     out
 }
 
-fn resolve_individual_line(input: &PsychoCall, block_type: &BlockType) -> Option<ResolvedExpression> {
-    let available_keywords = gather_keywords();
-    let mut resolved_expressions = Vec::new();
+fn resolve_individual_line(input: &PsychoExpression, block_type: &BlockType) -> Option<ResolvedExpression> {
+    match input {
+        PsychoExpression::Expression(e) => {
+            resolve_expressions(e)
+        }
 
-    for expression in &input.expressions {
-        match expression {
-            PsychoExpression::Call(c) => {
-                resolved_expressions.push(resolve_individual_line(&c, block_type)?);
-            }
+        PsychoExpression::Call(c) => {
+            resolve_call(c, block_type)
+        }
 
-            PsychoExpression::Expression(e) => {
-                resolved_expressions.push(resolve_expressions(&e)?);
-            }
+        PsychoExpression::Redirect(into, from) => {
+            Some(ResolvedExpression::Redirect(
+                Box::new(resolve_individual_line(into, block_type)?),
+                Box::new(resolve_individual_line(from, block_type)?),
+            ))
         }
     }
+}
+
+fn resolve_call(input: &PsychoCall, block_type: &BlockType) -> Option<ResolvedExpression> {
+    let available_keywords = gather_keywords();
+
+    let resolved_expressions: Vec<ResolvedExpression> = input
+        .expressions
+        .iter()
+        .map(|expression| resolve_individual_line(expression, block_type))
+        .collect::<Option<Vec<_>>>()?;
 
     let keyword = available_keywords
         .into_iter()
         .find(|k| {
             let matches = k.origin.contains(&input.keyword);
 
-            let whitelisted = block_type.symbol_whitelist
+            let whitelisted = block_type
+                .symbol_whitelist
                 .iter()
-                .any(|s| k.origin.starts_with(s));
+                .any(|s| k.origin.contains(s));
 
-            let blacklisted = block_type.symbol_blacklist
+            let blacklisted = block_type
+                .symbol_blacklist
                 .iter()
-                .any(|s| k.origin.starts_with(s));
+                .any(|s| k.origin.contains(s));
 
             matches && whitelisted && !blacklisted
         })?;
@@ -127,7 +142,7 @@ fn resolve_individual_line(input: &PsychoCall, block_type: &BlockType) -> Option
 fn resolve_expressions(input: &str) -> Option<ResolvedExpression> {
     let expression_parsers = gather_expression_parsers();
 
-    let mut possible_expressions: Vec<Box<dyn Expression>> = Vec::new();
+    let mut possible_expressions: Vec<SharedExpression> = Vec::new();
 
     for parser in expression_parsers {
         if let Some(exp) = (parser.parse)(input) {
@@ -135,11 +150,10 @@ fn resolve_expressions(input: &str) -> Option<ResolvedExpression> {
         }
     }
 
-    if possible_expressions.len() >= 1 {
-        // //! only takes first possible expression needs to be changed
-
+    if !possible_expressions.is_empty() {
+        // //! Only takes first possible expression, needs to be changed.
         return Some(ResolvedExpression::Expression(
-                possible_expressions.remove(0)
+            possible_expressions.remove(0),
         ));
     }
 

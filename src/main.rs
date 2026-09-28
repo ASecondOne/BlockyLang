@@ -1,7 +1,7 @@
 use std::fs::self;
-
-use blocky_lang::{executers::dirty_executer::dirty_executer, psycho_parser::attempt_psycho_parse, symbol_resolver::resolve_psycho_blocks};
 use colored::Colorize;
+
+use blocky_lang::{psychoparser::psycho_parser::attempt_psycho_parse, symbol_resolver::resolve_psycho_blocks};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -60,11 +60,15 @@ fn handle_run() {
 
         let out = attempt_psycho_parse(f_contents);
 
+        println!("{:#?}", out);
+
+        println!("\n|---------------------------------|\n");
+
         let resolved_out = resolve_psycho_blocks(out);
 
-        // println!("{:#?}", resolved_out);
+        println!("{:#?}", resolved_out);
 
-        dirty_executer(resolved_out);
+        // dirty_executer(resolved_out);
 
         return;
     }

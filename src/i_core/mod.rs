@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{i_core::{math::inc_one, stdout::println, value::expression_parser}, symbol_resolver::{BlockType, ExpressionParser, Keyword}};
+use crate::{i_core::{datastore::{var::i_let, variable_parse}, math::inc_one, stdout::println, value::value_parser}, symbol_resolver::{BlockType, ExpressionParser, Keyword}};
 
 mod value;
 mod math;
@@ -14,7 +14,14 @@ pub fn gather_expression_parsers() -> Vec<ExpressionParser> {
     out.push(
         ExpressionParser {
             origin: "i_core::value",
-            parse: expression_parser
+            parse: value_parser
+        }
+    );
+
+    out.push(
+        ExpressionParser {
+            origin: "i_core::datastore",
+            parse: variable_parse
         }
     );
 
@@ -32,6 +39,11 @@ pub fn gather_keywords() -> Vec<Keyword> {
     out.push(Keyword { 
         origin: "i_core::math::inc_one".to_string(), 
         execute: inc_one 
+    });
+
+    out.push(Keyword { 
+        origin: "i_core::datastore::var::let".to_string(), 
+        execute: i_let 
     });
 
     out

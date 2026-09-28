@@ -1,9 +1,9 @@
-use crate::symbol_resolver::Expression;
+use crate::symbol_resolver::SharedExpression;
 
 pub mod dirty_executer;
 
 pub enum ExcuterOutput {
     ValidNone,
-    ValidSome(Box<dyn Expression>),
+    ValidSome(SharedExpression),
     Error(String)
 }

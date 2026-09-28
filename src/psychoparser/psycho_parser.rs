@@ -1,7 +1,9 @@
+use crate::psychoparser::top_level_finder::{find_top_level_dot, find_top_level_redirect, find_top_level_space};
+
 #[derive(Debug)]
 pub struct PsychoBlock {
     pub block_type: String,
-    pub contents: Vec<PsychoCall>,
+    pub contents: Vec<PsychoExpression>,
 }
 
 #[derive(Debug)]
@@ -14,6 +16,7 @@ pub struct PsychoCall {
 pub enum PsychoExpression {
     Expression(String),
     Call(PsychoCall),
+    Redirect(Box<PsychoExpression>, Box<PsychoExpression>),
 }
 
 pub fn attempt_psycho_parse(file_contents: Vec<String>) -> Vec<PsychoBlock> {
@@ -46,7 +49,7 @@ fn psycho_block_parse(contents: String) -> Vec<PsychoBlock> {
         }
 
         if line.starts_with("</") && line.ends_with(">") && block_tag.is_some() {
-            // TODO: Make psycho parser return in case of an start-less end tag
+            // TODO: Make psycho parser return in case of a start-less end tag
             let end_block_tag = line
                 .strip_prefix("</")
                 .unwrap()
@@ -57,7 +60,7 @@ fn psycho_block_parse(contents: String) -> Vec<PsychoBlock> {
                 let content_between_tags =
                     get_lines_between_tags(&lines, start_tag_pos.unwrap(), i);
 
-                let psycho_lines: Vec<PsychoCall> = content_between_tags
+                let psycho_lines: Vec<PsychoExpression> = content_between_tags
                     .iter()
                     .filter_map(|line| psycho_line_parse(line))
                     .collect();
@@ -73,20 +76,20 @@ fn psycho_block_parse(contents: String) -> Vec<PsychoBlock> {
     out
 }
 
-fn psycho_line_parse(contents: &str) -> Option<PsychoCall> {
+fn psycho_line_parse(contents: &str) -> Option<PsychoExpression> {
     let contents = contents.trim();
 
     if contents.is_empty() {
         return None;
     }
 
-    parse_call(contents)
+    Some(parse_expression(contents))
 }
 
-// * Parses either:
-// * foo bar
-// * foo(bar)
-// * bar.foo()
+// Parses either:
+// foo bar
+// foo(bar)
+// bar.foo()
 fn parse_call(contents: &str) -> Option<PsychoCall> {
     let contents = contents.trim();
 
@@ -131,13 +134,15 @@ fn parse_call(contents: &str) -> Option<PsychoCall> {
 fn parse_expression(contents: &str) -> PsychoExpression {
     let contents = contents.trim();
 
-    if find_top_level_dot(contents).is_some()
-        || find_call_open(contents).is_some()
-        || find_top_level_space(contents).is_some()
-    {
-        if let Some(call) = parse_call(contents) {
-            return PsychoExpression::Call(call);
-        }
+    if let Some(i) = find_top_level_redirect(contents) {
+        return PsychoExpression::Redirect(
+            Box::new(parse_expression(&contents[..i])),
+            Box::new(parse_expression(&contents[i + 1..])),
+        );
+    }
+
+    if let Some(call) = parse_call(contents) {
+        return PsychoExpression::Call(call);
     }
 
     PsychoExpression::Expression(contents.to_string())
@@ -192,35 +197,6 @@ fn split_arguments(contents: &str) -> Vec<&str> {
     out
 }
 
-fn find_top_level_space(contents: &str) -> Option<usize> {
-    let mut string = false;
-    let mut depth = 0;
-
-    for (i, c) in contents.char_indices() {
-        if c == '"' {
-            string = !string;
-            continue;
-        }
-
-        if string {
-            continue;
-        }
-
-        match c {
-            '(' => depth += 1,
-            ')' => depth -= 1,
-
-            c if c.is_whitespace() && depth == 0 => {
-                return Some(i);
-            }
-
-            _ => {}
-        }
-    }
-
-    None
-}
-
 fn find_call_open(contents: &str) -> Option<usize> {
     let mut string = false;
 
@@ -236,36 +212,6 @@ fn find_call_open(contents: &str) -> Option<usize> {
     }
 
     None
-}
-
-fn find_top_level_dot(contents: &str) -> Option<usize> {
-    let mut string = false;
-    let mut depth = 0;
-    let mut found = None;
-
-    for (i, c) in contents.char_indices() {
-        if c == '"' {
-            string = !string;
-            continue;
-        }
-
-        if string {
-            continue;
-        }
-
-        match c {
-            '(' => depth += 1,
-            ')' => depth -= 1,
-
-            '.' if depth == 0 => {
-                found = Some(i);
-            }
-
-            _ => {}
-        }
-    }
-
-    found
 }
 
 fn prep(src: &str) -> String {
@@ -326,6 +272,6 @@ fn prep(src: &str) -> String {
     out
 }
 
-fn get_lines_between_tags<'a>(lines: &'a [&'a str],start: usize,end: usize) -> &'a [&'a str] {
+fn get_lines_between_tags<'a>(lines: &'a [&'a str], start: usize, end: usize) -> &'a [&'a str] {
     &lines[start + 1..end]
 }

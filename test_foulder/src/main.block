@@ -1,11 +1,11 @@
 <define>
-
+    let a = 5;
 </define>
 
 <execute>
-    println "Hello Block";
+    println a;
 
-    println("Hello Block");
+    a = 7;
 
-    69.inc_one().println();
+    println a;
 </execute>
