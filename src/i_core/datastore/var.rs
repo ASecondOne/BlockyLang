@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use crate::{executers::ExcuterOutput, i_core::{datastore::VARIABLES, value::Value}, symbol_resolver::{Expression, SharedExpression}};
+use crate::{executers::ExcuterOutput, i_core::value::Value, symbol_resolver::{Expression, SharedExpression}};
 
 // //? Later needs access modifirers, traits and so on
 #[derive(Debug, Clone)]
@@ -25,24 +25,25 @@ impl Expression for Variable {
     }
 
     fn redirect(&mut self, new: SharedExpression) -> ExcuterOutput {
-        ExcuterOutput::ValidNone
+        if let Some(new_value) = new.lock().unwrap().as_any().downcast_ref::<Value>() {
+            self.value = new_value.clone(); // //! Somehow get rid of clone
+            return ExcuterOutput::ValidNone;
+        } 
+        
+        ExcuterOutput::Error("Problem".to_string())
     }
 }
 
 pub fn i_let(mut args: Vec<SharedExpression>) -> ExcuterOutput {
     let arg = args.remove(0);
 
-    if let Some(var) = arg.lock().unwrap().as_any().downcast_ref::<Variable>() {
-        let var = Variable {
-            name: var.name.to_string(),
-            value: Value::Undefined
-        };
+    let is_variable = arg
+        .lock()
+        .ok()
+        .is_some_and(|arg| arg.as_any().downcast_ref::<Variable>().is_some());
 
-        let var: SharedExpression = Arc::new(Mutex::new(var));
-
-        VARIABLES.lock().unwrap().push(Arc::clone(&var));
-
-        return ExcuterOutput::ValidSome(var);
+    if is_variable {
+        return ExcuterOutput::ValidSome(arg);
     }
 
     ExcuterOutput::ValidNone

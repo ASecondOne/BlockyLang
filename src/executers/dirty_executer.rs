@@ -1,4 +1,4 @@
-use crate::{executers::ExcuterOutput::{self, Error, ValidNone, ValidSome}, symbol_resolver::{ResolvedBlock, ResolvedExpression, SharedExpression}};
+use crate::{executers::ExcuterOutput::{self, ValidNone, ValidSome}, symbol_resolver::{ResolvedBlock, ResolvedExpression, SharedExpression}};
 
 pub fn dirty_executer(input: Vec<ResolvedBlock>) {
     for block in input {
@@ -34,16 +34,10 @@ fn execute(input: ResolvedExpression) -> ExcuterOutput {
             let out_into = execute(*into);
             let out_from = execute(*from);
 
-            match out_into {
-                ValidNone => {}
-                ValidSome(e) => {}
-                Error(_) => {}
-            }
-
-            match out_from {
-                ValidNone => {}
-                ValidSome(e) => {}
-                Error(_) => {}
+            if let (ValidSome(into), ValidSome(from)) = (out_into, out_from) {
+                if let Ok(mut into) = into.lock() {
+                    let _ = into.redirect(from);
+                }
             }
 
             ValidNone

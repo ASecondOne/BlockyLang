@@ -120,10 +120,12 @@ fn resolve_call(input: &PsychoCall, block_type: &BlockType) -> Option<ResolvedEx
         .find(|k| {
             let matches = k.origin.contains(&input.keyword);
 
-            let whitelisted = block_type
+            let mut whitelisted = block_type
                 .symbol_whitelist
                 .iter()
                 .any(|s| k.origin.contains(s));
+
+            if block_type.symbol_whitelist.is_empty() {whitelisted = true}
 
             let blacklisted = block_type
                 .symbol_blacklist
