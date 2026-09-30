@@ -1,21 +1,24 @@
-use crate::{executers::ExcuterOutput::{self, ValidNone, ValidSome}, symbol_resolver::{ResolvedBlock, ResolvedExpression, SharedExpression}};
+use crate::{executers::ExcuterOutput::{self, ValidNone, ValidSome}, symbolresolver::symbol_resolver::{LocalState, ResolvedBlock, ResolvedExpression, SharedExpression}};
 
 pub fn dirty_executer(input: Vec<ResolvedBlock>) {
     for block in input {
         for content in block.resolved_lines {
-            execute(content);
+            execute(content, &mut LocalState::default());
         }
     }
 }
 
-fn execute(input: ResolvedExpression) -> ExcuterOutput {
+fn execute(input: ResolvedExpression, local_state: &mut LocalState) -> ExcuterOutput {
     match input {
-        ResolvedExpression::Expression(e) => ValidSome(e),
+        ResolvedExpression::Expression(e) => match local_state.resolve(e) {
+            Ok(expression) => ValidSome(expression),
+            Err(_) => ValidNone,
+        },
 
         ResolvedExpression::KeywordCall(k) => {
             let args: Vec<ExcuterOutput> = k.args
                 .into_iter()
-                .map(execute)
+                .map(|arg| execute(arg, local_state))
                 .collect();
 
             let args: Vec<SharedExpression> = args
@@ -31,13 +34,23 @@ fn execute(input: ResolvedExpression) -> ExcuterOutput {
         },
 
         ResolvedExpression::Redirect(into, from) => {
-            let out_into = execute(*into);
-            let out_from = execute(*from);
+            let out_into = execute(*into, local_state);
+            let out_from = execute(*from, local_state);
 
             if let (ValidSome(into), ValidSome(from)) = (out_into, out_from) {
                 if let Ok(mut into) = into.lock() {
                     let _ = into.redirect(from);
                 }
+            }
+
+            ValidNone
+        }
+
+        ResolvedExpression::Closure(mut closure) => {
+            closure.local_state = local_state.fork().unwrap_or_default();
+
+            for expression in closure.contents {
+                execute(expression, &mut closure.local_state);
             }
 
             ValidNone

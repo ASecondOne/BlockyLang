@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{i_core::{datastore::{access_modifires::i_get_AcMods, var::{i_let, i_type}, variable_parse}, math::i_inc_one, stdout::i_println, value::value_parser}, symbol_resolver::{BlockType, ExpressionParser, Keyword}};
+use crate::{i_core::{datastore::{access_modifires::i_get_acmods, var::{i_let, i_origin, i_type}, variable_parse}, math::i_inc_one, stdout::i_println, value::value_parser}, symbolresolver::symbol_resolver::{BlockType, ExpressionParser, Keyword}};
 
 mod value;
 mod math;
@@ -52,8 +52,13 @@ pub fn gather_keywords() -> Vec<Keyword> {
     });
 
     out.push(Keyword { 
+        origin: "i_core::datastore::var::origin".to_string(), 
+        execute: i_origin 
+    });
+
+    out.push(Keyword { 
         origin: "i_core::datastore::access_modifires::get_AcMods".to_string(), 
-        execute: i_get_AcMods 
+        execute: i_get_acmods 
     });
 
     out

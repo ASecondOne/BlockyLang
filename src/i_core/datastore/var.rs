@@ -2,12 +2,18 @@
 
 use std::sync::{Arc, Mutex};
 
-use crate::{executers::ExcuterOutput, i_core::{datastore::access_modifires::AccessModifires, value::Value}, symbol_resolver::{Expression, SharedExpression}};
+use crate::{executers::ExcuterOutput, i_core::{datastore::access_modifires::AccessModifires, value::Value}, symbolresolver::symbol_resolver::{Expression, SharedExpression}};
 
 // //? Later needs access modifirers, traits and so on
 #[derive(Debug, Clone)]
 pub struct Variable {
     pub name: String,
+    /// The immediate variable copy this value originated from.
+    pub origin: String,
+    /// Stable identity of the original declaration, used to find it through nested scopes.
+    pub root: String,
+    /// Identity of this particular copy in its current scope.
+    pub identity: String,
     pub access_modifires: Vec<AccessModifires>,
     pub value: Value,
 }
@@ -22,6 +28,10 @@ impl Expression for Variable {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
 
@@ -61,7 +71,7 @@ pub fn i_let(mut args: Vec<SharedExpression>) -> ExcuterOutput {
 
 pub fn i_type(mut args: Vec<SharedExpression>) -> ExcuterOutput {
     if args.is_empty() {
-        return ExcuterOutput::Error("".to_string());
+        return ExcuterOutput::Error("`type` requires a variable name".to_string());
     }
 
     let arg = args.remove(0);
@@ -74,7 +84,7 @@ pub fn i_type(mut args: Vec<SharedExpression>) -> ExcuterOutput {
         
         let value = &var.value;
 
-        return i_type_matcher(value);
+        return type_matcher(value);
         
     } else if let Some(value) = arg
         .lock()
@@ -83,13 +93,44 @@ pub fn i_type(mut args: Vec<SharedExpression>) -> ExcuterOutput {
         .as_any()
         .downcast_ref::<Value>() {
         
-        return i_type_matcher(value);
+        return type_matcher(value);
     }
 
     ExcuterOutput::Error("".to_string())
 }
 
-fn i_type_matcher(value: &Value) -> ExcuterOutput {
+pub fn i_origin(mut args: Vec<SharedExpression>) -> ExcuterOutput {
+    if args.is_empty() {
+        ExcuterOutput::Error("`let` requires a variable name".to_string());
+    }
+
+    let arg = args.remove(0);
+
+    if let Some(var) = arg
+        .lock()
+        .ok()
+        .unwrap()
+        .as_any()
+        .downcast_ref::<Variable>() {
+
+        let origin = &var.origin;
+
+        return ExcuterOutput::ValidSome(
+            Arc::new(
+                Mutex::new(
+                    Value::String(
+                        origin.to_string()
+                    )
+                )
+            )
+        );
+    }
+
+
+    ExcuterOutput::Error("`let` requires a variable name".to_string())
+}
+
+fn type_matcher(value: &Value) -> ExcuterOutput {
     match value {
             &Value::Boolean(_) => return ExcuterOutput::ValidSome(
                 Arc::new(

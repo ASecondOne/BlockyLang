@@ -19,6 +19,7 @@ pub enum PsychoExpression {
     Expression(String),
     Call(PsychoCall),
     Redirect(Box<PsychoExpression>, Box<PsychoExpression>),
+    Closure(Vec<PsychoExpression>),
 }
 
 pub fn attempt_psycho_parse(file_contents: Vec<String>) -> Result<Vec<PsychoBlock>, ()> {
@@ -124,6 +125,7 @@ fn psycho_line_parse(contents: &str) -> Result<Option<PsychoExpression>, ()> {
 fn validate_expression_syntax(contents: &str) -> Result<(), String> {
     let mut string = false;
     let mut depth = 0usize;
+    let mut closure_depth = 0usize;
 
     for c in contents.chars() {
         if c == '"' {
@@ -139,6 +141,10 @@ fn validate_expression_syntax(contents: &str) -> Result<(), String> {
             '(' => depth += 1,
             ')' if depth == 0 => return Err("unexpected `)`".to_string()),
             ')' => depth -= 1,
+
+            '{' => closure_depth += 1,
+            '}' if closure_depth == 0 => return Err("unexpected `}`".to_string()),
+            '}' => closure_depth -= 1,
             _ => {}
         }
     }
@@ -213,6 +219,17 @@ fn parse_call(contents: &str) -> Option<PsychoCall> {
 fn parse_expression(contents: &str) -> PsychoExpression {
     let contents = contents.trim();
 
+    if is_complete_closure(contents) {
+        let body = &contents[1..contents.len() - 1];
+        let expressions = split_closure_body(body)
+            .into_iter()
+            .filter(|expression| !expression.trim().is_empty())
+            .map(parse_expression)
+            .collect();
+
+        return PsychoExpression::Closure(expressions);
+    }
+
     if let Some(i) = find_top_level_redirect(contents) {
         return PsychoExpression::Redirect(
             Box::new(parse_expression(&contents[..i])),
@@ -225,6 +242,73 @@ fn parse_expression(contents: &str) -> PsychoExpression {
     }
 
     PsychoExpression::Expression(contents.to_string())
+}
+
+fn is_complete_closure(contents: &str) -> bool {
+    if !contents.starts_with('{') || !contents.ends_with('}') {
+        return false;
+    }
+
+    let mut depth = 0usize;
+    let mut string = false;
+
+    for (index, c) in contents.char_indices() {
+        if c == '"' {
+            string = !string;
+            continue;
+        }
+
+        if string {
+            continue;
+        }
+
+        match c {
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if depth == 0 && index != contents.len() - 1 {
+                    return false;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    depth == 0 && !string
+}
+
+fn split_closure_body(contents: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut start = 0;
+    let mut parentheses = 0usize;
+    let mut braces = 0usize;
+    let mut string = false;
+
+    for (index, c) in contents.char_indices() {
+        if c == '"' {
+            string = !string;
+            continue;
+        }
+
+        if string {
+            continue;
+        }
+
+        match c {
+            '(' => parentheses += 1,
+            ')' => parentheses = parentheses.saturating_sub(1),
+            '{' => braces += 1,
+            '}' => braces = braces.saturating_sub(1),
+            ';' if parentheses == 0 && braces == 0 => {
+                out.push(contents[start..index].trim());
+                start = index + 1;
+            }
+            _ => {}
+        }
+    }
+
+    out.push(contents[start..].trim());
+    out
 }
 
 fn parse_arguments(contents: &str) -> Vec<PsychoExpression> {
@@ -298,6 +382,7 @@ fn prep(src: &str) -> String {
 
     let mut string = false;
     let mut space = false;
+    let mut closure_depth = 0usize;
 
     for c in src.chars() {
         if c == '"' {
@@ -325,23 +410,45 @@ fn prep(src: &str) -> String {
             continue;
         }
 
+        if c == '\n' {
+            space = false;
+            if closure_depth == 0 && !out.ends_with('\n') {
+                out.push('\n');
+            }
+            continue;
+        }
+
         if c.is_whitespace() {
             space = true;
             continue;
         }
 
-        if space && !out.ends_with('\n') && c != '<' {
-            out.push(' ');
+        if space && !out.ends_with('\n') {
+            if c == '<' {
+                out.push('\n');
+            } else {
+                out.push(' ');
+            }
         }
 
         space = false;
 
         if c == ';' {
-            out.push('\n');
+            if closure_depth == 0 {
+                out.push('\n');
+            } else {
+                out.push(';');
+            }
             continue;
         }
 
         out.push(c);
+
+        match c {
+            '{' => closure_depth += 1,
+            '}' => closure_depth = closure_depth.saturating_sub(1),
+            _ => {}
+        }
 
         if c == '>' {
             out.push('\n');

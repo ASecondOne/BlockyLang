@@ -2,7 +2,7 @@
 
 use std::{collections::HashSet, sync::{Arc, LazyLock, Mutex}};
 
-use crate::{i_core::datastore::var::Variable, symbol_resolver::SharedExpression};
+use crate::{i_core::datastore::var::Variable, symbolresolver::symbol_resolver::SharedExpression};
 
 pub mod var;
 pub mod access_modifires;
@@ -33,6 +33,9 @@ pub fn variable_parse(input: &str) -> Option<SharedExpression> {
 
     let var = Variable {
         name: input.to_string(),
+        origin: String::new(),
+        root: String::new(),
+        identity: String::new(),
         access_modifires: Vec::new(),
         value: super::value::Value::Undefined,
     };

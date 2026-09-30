@@ -1,14 +1,13 @@
 use std::sync::{Arc, Mutex};
 
-use crate::{executers::ExcuterOutput, i_core::{datastore::var::Variable, value::Value}, symbol_resolver::SharedExpression};
+use crate::{executers::ExcuterOutput, i_core::{datastore::var::Variable, value::Value}, symbolresolver::symbol_resolver::SharedExpression};
 
 #[derive(Debug, Clone)]
 pub enum AccessModifires {
-    Mutabl,
-    Borrow,
+
 }
 
-pub fn i_get_AcMods(mut args: Vec<SharedExpression>) -> ExcuterOutput {
+pub fn i_get_acmods(mut args: Vec<SharedExpression>) -> ExcuterOutput {
     if args.is_empty() {
         return ExcuterOutput::Error("`get_AcMods` requires one argument".to_string());
     }

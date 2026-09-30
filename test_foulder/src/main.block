@@ -3,13 +3,17 @@
 </define>
 
 <execute>
+    println a.origin();
+
+    {
+        a = 6;
+        println a.origin();
+
+        {
+            a = 7;
+            println a.origin();
+        }
+    }
+
     println a;
-
-    a = 7.inc_one();
-
-    println type a;
-
-    println a.type();
-
-    println a.get_AcMods();
 </execute>

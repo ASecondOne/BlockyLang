@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use crate::symbol_resolver::{Expression, SharedExpression};
+use crate::symbolresolver::symbol_resolver::{Expression, SharedExpression};
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -36,6 +36,10 @@ impl Expression for Value {
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
 

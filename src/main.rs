@@ -1,7 +1,7 @@
 use std::fs::self;
 use colored::Colorize;
 
-use blocky_lang::{executers::executer::executer, psychoparser::psycho_parser::attempt_psycho_parse, symbol_resolver::resolve_psycho_blocks};
+use blocky_lang::{executers::executer::executer, psychoparser::psycho_parser::attempt_psycho_parse, symbolresolver::symbol_resolver::resolve_psycho_blocks};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
