@@ -171,6 +171,18 @@ fn parse_error(message: String) {
 fn parse_call(contents: &str) -> Option<PsychoCall> {
     let contents = contents.trim();
 
+    // foo bar
+    // Parse the outer call before dot notation inside its arguments.
+    if let Some(i) = find_top_level_space(contents) {
+        let keyword = contents[..i].trim();
+        let expressions = contents[i..].trim();
+
+        return Some(PsychoCall {
+            keyword: keyword.to_string(),
+            expressions: parse_arguments(expressions),
+        });
+    }
+
     // bar.foo()
     if let Some(i) = find_top_level_dot(contents) {
         let left = &contents[..i];
@@ -180,17 +192,6 @@ fn parse_call(contents: &str) -> Option<PsychoCall> {
             call.expressions.insert(0, parse_expression(left));
             return Some(call);
         }
-    }
-
-    // foo bar
-    if let Some(i) = find_top_level_space(contents) {
-        let keyword = contents[..i].trim();
-        let expressions = contents[i..].trim();
-
-        return Some(PsychoCall {
-            keyword: keyword.to_string(),
-            expressions: parse_arguments(expressions),
-        });
     }
 
     // foo(bar)

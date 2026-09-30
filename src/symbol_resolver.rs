@@ -1,10 +1,12 @@
 use std::any::Any;
+use std::collections::HashSet;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
 use colored::Colorize;
 
 use crate::executers::ExcuterOutput;
+use crate::i_core::datastore::{var::Variable, ASSUMEND_VARIABLES};
 use crate::i_core::{gather_blocktypes, gather_expression_parsers, gather_keywords};
 use crate::psychoparser::psycho_parser::{PsychoBlock, PsychoCall, PsychoExpression};
 
@@ -109,6 +111,11 @@ pub fn resolve_psycho_blocks(psycho_blocks: Vec<PsychoBlock>) -> Result<Vec<Reso
         });
     }
 
+    if let Err(message) = validate_rough_variable_existance(&out) {
+        eprintln!("{}", format!("Resolver error: {message}").red());
+        had_errors = true;
+    }
+
     if had_errors { Err(()) } else { Ok(out) }
 }
 
@@ -181,20 +188,76 @@ fn resolve_call(input: &PsychoCall, block_type: &BlockType) -> Result<ResolvedEx
 fn resolve_expressions(input: &str) -> Result<ResolvedExpression, String> {
     let expression_parsers = gather_expression_parsers();
 
-    let mut possible_expressions: Vec<SharedExpression> = Vec::new();
-
     for parser in expression_parsers {
         if let Some(exp) = (parser.parse)(input) {
-            possible_expressions.push(exp);
+            return Ok(ResolvedExpression::Expression(exp));
         }
     }
 
-    if !possible_expressions.is_empty() {
-        // //! Only takes first possible expression, needs to be changed.
-        return Ok(ResolvedExpression::Expression(
-            possible_expressions.remove(0),
-        ));
+    Err(format!("Could not parse expression `{input}`"))
+}
+
+fn validate_rough_variable_existance(input: &[ResolvedBlock]) -> Result<(), String> {
+    let mut assumed_variables = ASSUMEND_VARIABLES
+        .lock()
+        .map_err(|_| "Could not lock assumed variables".to_string())?;
+
+    for rb in input {
+        for expression in &rb.resolved_lines {
+            search_for_let(expression, &mut assumed_variables)?;
+        }
     }
 
-    Err(format!("Could not parse expression `{input}`"))
+    if assumed_variables.is_empty() {
+        return Ok(());
+    }
+
+    let mut missing_variables: Vec<&str> = assumed_variables
+        .iter()
+        .map(String::as_str)
+        .collect();
+    missing_variables.sort_unstable();
+
+    Err(format!(
+        "Variables do not exist: {}",
+        missing_variables.join(", ")
+    ))
+}
+
+fn search_for_let(input: &ResolvedExpression, assumed_variables: &mut HashSet<String>) -> Result<(), String> {
+    match input {
+        ResolvedExpression::KeywordCall(call) => {
+            if call.keyword.origin == "i_core::datastore::var::let" {
+                for arg in &call.args {
+                    let ResolvedExpression::Expression(expression) = arg else {
+                        return Err("`let` requires a variable name".to_string());
+                    };
+
+                    let expression = expression
+                        .lock()
+                        .map_err(|_| "Could not lock declared variable".to_string())?;
+
+                    let variable = expression
+                        .as_any()
+                        .downcast_ref::<Variable>()
+                        .ok_or_else(|| "`let` requires a variable name".to_string())?;
+
+                    assumed_variables.remove(&variable.name);
+                }
+            }
+
+            for arg in &call.args {
+                search_for_let(arg, assumed_variables)?;
+            }
+        }
+
+        ResolvedExpression::Redirect(into, from) => {
+            search_for_let(into, assumed_variables)?;
+            search_for_let(from, assumed_variables)?;
+        }
+
+        ResolvedExpression::Expression(_) => {}
+    }
+
+    Ok(())
 }

@@ -7,5 +7,9 @@
 
     a = 7.inc_one();
 
-    println a;
+    println type a;
+
+    println a.type();
+
+    println a.get_AcMods();
 </execute>

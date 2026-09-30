@@ -2,7 +2,7 @@
 
 use crate::{executers::ExcuterOutput, i_core::{datastore::var::Variable, value::Value}, symbol_resolver::{Expression, SharedExpression}};
 
-pub fn println(mut args: Vec<SharedExpression>) -> ExcuterOutput {
+pub fn i_println(mut args: Vec<SharedExpression>) -> ExcuterOutput {
     if args.is_empty() {
         return ExcuterOutput::Error("`println` requires one argument".to_string());
     }
