@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use crate::{executers::ExcuterOutput, i_core::{datastore::access_modifires::AccessModifires, value::Value}, symbolresolver::symbol_resolver::{Expression, SharedExpression}};
+use crate::{executers::ExcuterOutput, i_core::{datastore::{access_modifires::AccessModifires, helpers::{get_value, get_variable, string_expression, take_first_argument}}, value::Value}, symbolresolver::{localstate::LocalState, symbol_resolver::{Expression, SharedExpression}}};
 
 // //? Later needs access modifirers, traits and so on
 #[derive(Debug, Clone)]
@@ -50,84 +50,59 @@ impl Expression for Variable {
     }
 }
 
-pub fn i_let(mut args: Vec<SharedExpression>) -> ExcuterOutput {
-    if args.is_empty() {
+pub fn i_let(mut args: Vec<SharedExpression>, _local_state: &mut LocalState) -> ExcuterOutput {
+    let Some(arg) = take_first_argument(&mut args) else {
         return ExcuterOutput::Error("`let` requires a variable name".to_string());
+    };
+
+    match get_variable(&arg) {
+        Ok(Some(_)) => ExcuterOutput::ValidSome(arg),
+        Ok(None) => ExcuterOutput::Error("`let` requires a variable name".to_string()),
+        Err(message) => ExcuterOutput::Error(message),
     }
-
-    let arg = args.remove(0);
-
-    let is_variable = arg
-        .lock()
-        .ok()
-        .is_some_and(|arg| arg.as_any().downcast_ref::<Variable>().is_some());
-
-    if is_variable {
-        return ExcuterOutput::ValidSome(arg);
-    }
-
-    ExcuterOutput::Error("`let` requires a variable name".to_string())
 }
 
-pub fn i_type(mut args: Vec<SharedExpression>) -> ExcuterOutput {
-    if args.is_empty() {
+pub fn i_type(mut args: Vec<SharedExpression>, _local_state: &mut LocalState) -> ExcuterOutput {
+    let Some(arg) = take_first_argument(&mut args) else {
         return ExcuterOutput::Error("`type` requires a variable name".to_string());
+    };
+
+    match get_variable(&arg) {
+        Ok(Some(variable)) => type_matcher(&variable.value),
+        Ok(None) => match get_value(&arg) {
+            Ok(Some(value)) => type_matcher(&value),
+            Ok(None) => ExcuterOutput::Error("`type` requires a variable or value".to_string()),
+            Err(message) => ExcuterOutput::Error(message),
+        },
+        Err(message) => ExcuterOutput::Error(message),
     }
-
-    let arg = args.remove(0);
-
-    if let Some(var) = arg
-        .lock()
-        .unwrap()
-        .as_any()
-        .downcast_ref::<Variable>() {
-        
-        let value = &var.value;
-
-        return type_matcher(value);
-        
-    } else if let Some(value) = arg
-        .lock()
-        .ok()
-        .unwrap()
-        .as_any()
-        .downcast_ref::<Value>() {
-        
-        return type_matcher(value);
-    }
-
-    ExcuterOutput::Error("".to_string())
 }
 
-pub fn i_origin(mut args: Vec<SharedExpression>) -> ExcuterOutput {
-    if args.is_empty() {
-        ExcuterOutput::Error("`let` requires a variable name".to_string());
+pub fn i_origin(mut args: Vec<SharedExpression>, _local_state: &mut LocalState) -> ExcuterOutput {
+    let Some(arg) = take_first_argument(&mut args) else {
+        return ExcuterOutput::Error("`origin` requires a variable name".to_string());
+    };
+
+    match get_variable(&arg) {
+        Ok(Some(variable)) => ExcuterOutput::ValidSome(string_expression(variable.origin)),
+        Ok(None) => ExcuterOutput::Error("`origin` requires a variable name".to_string()),
+        Err(message) => ExcuterOutput::Error(message),
+    }
+}
+
+pub fn i_transfer(mut args: Vec<SharedExpression>, local_state: &mut LocalState) -> ExcuterOutput {
+    if args.len() != 1 {
+        if args.is_empty() {
+            return ExcuterOutput::Error("`transfer` requires one variable".to_string());
+        }
+        return ExcuterOutput::Error("`transfer` accepts one variable".to_string());
     }
 
-    let arg = args.remove(0);
-
-    if let Some(var) = arg
-        .lock()
-        .ok()
-        .unwrap()
-        .as_any()
-        .downcast_ref::<Variable>() {
-
-        let origin = &var.origin;
-
-        return ExcuterOutput::ValidSome(
-            Arc::new(
-                Mutex::new(
-                    Value::String(
-                        origin.to_string()
-                    )
-                )
-            )
-        );
+    let arg = take_first_argument(&mut args).unwrap();
+    match local_state.transfer(arg) {
+        Ok(()) => ExcuterOutput::ValidNone,
+        Err(message) => ExcuterOutput::Error(message),
     }
-
-
-    ExcuterOutput::Error("`let` requires a variable name".to_string())
 }
 
 fn type_matcher(value: &Value) -> ExcuterOutput {

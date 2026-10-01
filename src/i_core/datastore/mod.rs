@@ -6,6 +6,7 @@ use crate::{i_core::datastore::var::Variable, symbolresolver::symbol_resolver::S
 
 pub mod var;
 pub mod access_modifires;
+pub mod helpers;
 
 pub static ASSUMEND_VARIABLES: LazyLock<Mutex<HashSet<String>>> = LazyLock::new(|| Mutex::new(HashSet::new()));
 

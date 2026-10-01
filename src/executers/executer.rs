@@ -1,8 +1,7 @@
 use colored::Colorize;
 
 use crate::{
-    executers::ExcuterOutput::{self, Error, ValidNone, ValidSome},
-    symbolresolver::symbol_resolver::{LocalState, ResolvedBlock, ResolvedExpression, SharedExpression},
+    executers::ExcuterOutput::{self, Error, ValidNone, ValidSome}, symbolresolver::{localstate::LocalState, symbol_resolver::{ResolvedBlock, ResolvedExpression, SharedExpression}},
 };
 
 pub fn executer(input: Vec<ResolvedBlock>) {
@@ -43,7 +42,7 @@ fn execute_in_state(input: ResolvedExpression, local_state: &mut LocalState) -> 
                 }
             }
 
-            (call.keyword.execute)(args)
+            (call.keyword.execute)(args, local_state)
         }
 
         ResolvedExpression::Redirect(into, from) => {

@@ -1,7 +1,6 @@
 use std::any::Any;
 use std::collections::HashSet;
 use std::fmt::Debug;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use colored::Colorize;
@@ -10,6 +9,7 @@ use crate::executers::ExcuterOutput;
 use crate::i_core::datastore::{var::Variable, ASSUMEND_VARIABLES};
 use crate::i_core::{gather_blocktypes, gather_expression_parsers, gather_keywords};
 use crate::psychoparser::psycho_parser::{PsychoBlock, PsychoCall, PsychoExpression};
+use crate::symbolresolver::localstate::LocalState;
 
 //? Used for Values and Variables
 pub trait Expression: Debug + Send {
@@ -49,79 +49,6 @@ pub struct Closure {
     pub local_state: LocalState,
 }
 
-#[derive(Debug, Default)]
-pub struct LocalState {
-    active: bool,
-    scope_id: String,
-    variables: std::collections::HashMap<String, SharedExpression>,
-}
-
-static NEXT_LOCAL_SCOPE_ID: AtomicU64 = AtomicU64::new(1);
-
-impl LocalState {
-    pub fn resolve(&mut self, expression: SharedExpression) -> Result<SharedExpression, String> {
-        if !self.active {
-            return Ok(expression);
-        }
-
-        let variable = {
-            let expression = expression
-                .lock()
-                .map_err(|_| "Could not lock variable for closure state".to_string())?;
-            expression
-                .as_any()
-                .downcast_ref::<Variable>()
-                .cloned()
-        };
-
-        let Some(variable) = variable else {
-            return Ok(expression);
-        };
-
-        if let Some(local) = self.variables.get(&variable.root) {
-            return Ok(Arc::clone(local));
-        }
-
-        let key = variable.root.clone();
-        let mut variable = variable;
-        variable.origin = variable.identity.clone();
-        variable.identity = format!("{}/{}", self.scope_id, variable.name);
-        let local: SharedExpression = Arc::new(Mutex::new(variable));
-        self.variables.insert(key, Arc::clone(&local));
-        Ok(local)
-    }
-
-    pub fn fork(&self) -> Result<Self, String> {
-        let mut forked = Self {
-            active: true,
-            scope_id: format!("closure{}", NEXT_LOCAL_SCOPE_ID.fetch_add(1, Ordering::Relaxed)),
-            variables: std::collections::HashMap::with_capacity(self.variables.len()),
-        };
-
-        for (origin, expression) in &self.variables {
-            let variable = {
-                let expression = expression
-                    .lock()
-                    .map_err(|_| "Could not copy enclosing closure state".to_string())?;
-                expression
-                    .as_any()
-                    .downcast_ref::<Variable>()
-                    .cloned()
-            };
-
-            if let Some(mut variable) = variable {
-                variable.origin = variable.identity.clone();
-                variable.identity = format!("{}/{}", forked.scope_id, variable.name);
-                forked
-                    .variables
-                    .insert(origin.clone(), Arc::new(Mutex::new(variable)));
-            }
-        }
-
-        Ok(forked)
-    }
-}
-
 #[derive(Debug)]
 pub enum ResolvedExpression {
     Expression(SharedExpression),
@@ -139,7 +66,7 @@ pub struct KeywordCall {
 #[derive(Clone, Debug)]
 pub struct Keyword {
     pub origin: String,
-    pub execute: fn(Vec<SharedExpression>) -> ExcuterOutput,
+    pub execute: fn(Vec<SharedExpression>, &mut LocalState) -> ExcuterOutput,
 }
 
 pub fn resolve_psycho_blocks(psycho_blocks: Vec<PsychoBlock>) -> Result<Vec<ResolvedBlock>, ()> {

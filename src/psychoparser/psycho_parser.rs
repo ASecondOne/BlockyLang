@@ -412,8 +412,12 @@ fn prep(src: &str) -> String {
 
         if c == '\n' {
             space = false;
-            if closure_depth == 0 && !out.ends_with('\n') {
-                out.push('\n');
+            if closure_depth == 0 {
+                if !out.ends_with('\n') {
+                    out.push('\n');
+                }
+            } else if !out.ends_with(';') {
+                out.push(';');
             }
             continue;
         }

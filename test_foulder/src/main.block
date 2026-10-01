@@ -3,7 +3,6 @@
 </define>
 
 <execute>
-    println a.origin();
 
     {
         a = 6;
@@ -12,7 +11,13 @@
         {
             a = 7;
             println a.origin();
+
+            transfer a;
         }
+
+        println a;
+
+        transfer a;
     }
 
     println a;

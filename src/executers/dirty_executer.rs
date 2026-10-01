@@ -1,4 +1,4 @@
-use crate::{executers::ExcuterOutput::{self, ValidNone, ValidSome}, symbolresolver::symbol_resolver::{LocalState, ResolvedBlock, ResolvedExpression, SharedExpression}};
+use crate::{executers::ExcuterOutput::{self, ValidNone, ValidSome}, symbolresolver::{localstate::LocalState, symbol_resolver::{ ResolvedBlock, ResolvedExpression, SharedExpression}}};
 
 pub fn dirty_executer(input: Vec<ResolvedBlock>) {
     for block in input {
@@ -30,7 +30,7 @@ fn execute(input: ResolvedExpression, local_state: &mut LocalState) -> ExcuterOu
                 })
                 .collect();
 
-            (k.keyword.execute)(args)
+            (k.keyword.execute)(args, local_state)
         },
 
         ResolvedExpression::Redirect(into, from) => {
