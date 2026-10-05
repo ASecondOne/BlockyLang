@@ -3,22 +3,34 @@
 </define>
 
 <execute>
+    println "start";
 
-    {
-        a = 6;
-        println a.origin();
+    if true, {
+        println "true works";
+    }
 
-        {
-            a = 7;
-            println a.origin();
+    if false, {
+        println "this should not print";
+    }
 
-            transfer a;
+    if true, {
+        if true, {
+            println "nested true works";
         }
 
-        println a;
-
-        transfer a;
+        if false, {
+            println "nested false should not print";
+        }
     }
+
+    if true, {
+        println "first line in closure";
+        println "second line in closure";
+    }
+
+    println "end";
+
+    a = inc_one a;
 
     println a;
 </execute>

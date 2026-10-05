@@ -15,6 +15,8 @@ pub fn find_top_level_space(contents: &str) -> Option<usize> {
         match c {
             '(' => depth += 1,
             ')' => depth -= 1,
+            '{' => depth += 1,
+            '}' => depth -= 1,
 
             c if c.is_whitespace() && depth == 0 => {
                 return Some(i);
@@ -44,6 +46,8 @@ pub fn find_top_level_redirect(contents: &str) -> Option<usize> {
         match c {
             '(' => depth += 1,
             ')' => depth -= 1,
+            '{' => depth += 1,
+            '}' => depth -= 1,
 
             '=' if depth == 0 => {
                 return Some(i);
@@ -74,6 +78,8 @@ pub fn find_top_level_dot(contents: &str) -> Option<usize> {
         match c {
             '(' => depth += 1,
             ')' => depth -= 1,
+            '{' => depth += 1,
+            '}' => depth -= 1,
 
             '.' if depth == 0 => {
                 found = Some(i);

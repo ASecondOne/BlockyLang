@@ -1,11 +1,11 @@
-use crate::{executers::ExcuterOutput, i_core::datastore::helpers::{get_variable, string_expression, take_first_argument}, symbolresolver::symbol_resolver::SharedExpression};
+use crate::{executers::ExcuterOutput, i_core::datastore::helpers::{get_variable, string_expression, take_first_argument}, symbolresolver::{localstate::LocalState, symbol_resolver::SharedExpression}};
 
 #[derive(Debug, Clone)]
 pub enum AccessModifires {
 
 }
 
-pub fn i_get_acmods(mut args: Vec<SharedExpression>, _local_state: &mut crate::symbolresolver::localstate::LocalState) -> ExcuterOutput {
+pub fn i_get_acmods(mut args: Vec<SharedExpression>, _local_state: &mut LocalState) -> ExcuterOutput {
     let Some(arg) = take_first_argument(&mut args) else {
         return ExcuterOutput::Error("`get_AcMods` requires one argument".to_string());
     };

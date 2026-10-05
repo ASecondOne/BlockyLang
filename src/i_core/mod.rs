@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
-use crate::{i_core::{datastore::{access_modifires::i_get_acmods, var::{i_let, i_origin, i_transfer, i_type}, variable_parse}, math::i_inc_one, stdout::i_println, value::value_parser}, symbolresolver::symbol_resolver::{BlockType, ExpressionParser, Keyword}};
+use crate::{i_core::{conditions::i_if, datastore::{access_modifires::i_get_acmods, var::{i_let, i_origin, i_transfer, i_type}, variable_parse}, math::i_inc_one, stdout::i_println, value::value_parser}, symbolresolver::symbol_resolver::{BlockType, ExpressionParser, Keyword}};
 
 mod value;
 mod math;
 mod stdout;
+mod conditions;
 
 pub(crate) mod datastore;
 
@@ -30,6 +31,11 @@ pub fn gather_expression_parsers() -> Vec<ExpressionParser> {
 
 pub fn gather_keywords() -> Vec<Keyword> {
     let mut out = Vec::new();
+
+    out.push(Keyword {
+        origin: "i_core::conditons::if".to_string(),
+        execute: i_if
+    });
 
     out.push(Keyword { 
         origin: "i_core::stdout::println".to_string(), 

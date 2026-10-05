@@ -49,6 +49,29 @@ pub struct Closure {
     pub local_state: LocalState,
 }
 
+//? Lets closures be passed to keywords without being executed, the keyword decides when (and if) they run
+impl Expression for Closure {
+    fn evaluate(&self) -> Option<SharedExpression> {
+        None
+    }
+
+    fn display(&self) -> Option<String> {
+        None
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn redirect(&mut self, _: SharedExpression) -> ExcuterOutput {
+        ExcuterOutput::Error("Cannot redirect into a closure".to_string())
+    }
+}
+
 #[derive(Debug)]
 pub enum ResolvedExpression {
     Expression(SharedExpression),
@@ -67,6 +90,20 @@ pub struct KeywordCall {
 pub struct Keyword {
     pub origin: String,
     pub execute: fn(Vec<SharedExpression>, &mut LocalState) -> ExcuterOutput,
+}
+
+impl Keyword {
+    pub fn name(&self) -> &str {
+        self.origin.rsplit("::").next().unwrap_or(&self.origin)
+    }
+
+    pub fn matches(&self, input: &str) -> bool {
+        if input.contains("::") {
+            self.origin == input
+        } else {
+            self.name() == input
+        }
+    }
 }
 
 pub fn resolve_psycho_blocks(psycho_blocks: Vec<PsychoBlock>) -> Result<Vec<ResolvedBlock>, ()> {
@@ -174,27 +211,17 @@ fn resolve_call(input: &PsychoCall, block_type: &BlockType) -> Result<ResolvedEx
 
     let keyword = available_keywords
         .into_iter()
-        .find(|k| {
-            let matches = k.origin.contains(&input.keyword);
+        .find(|k| k.matches(&input.keyword))
+        .ok_or_else(|| format!("Unknown keyword `{}`", input.keyword))?;
 
-            let whitelisted = block_type.symbol_whitelist.is_empty() || block_type
-                .symbol_whitelist
-                .iter()
-                .any(|s| k.origin.contains(s));
+    let in_namespace = |s: &String| keyword.origin == *s || keyword.origin.starts_with(&format!("{s}::"));
+    let whitelisted = block_type.symbol_whitelist.is_empty()
+        || block_type.symbol_whitelist.iter().any(in_namespace);
+    let blacklisted = block_type.symbol_blacklist.iter().any(in_namespace);
 
-            let blacklisted = block_type
-                .symbol_blacklist
-                .iter()
-                .any(|s| k.origin.contains(s));
-
-            matches && whitelisted && !blacklisted
-        })
-        .ok_or_else(|| {
-            format!(
-                "Keyword `{}` is not allowed in `<{}>` blocks",
-                input.keyword, block_type.name
-            )
-        })?;
+    if !whitelisted || blacklisted {
+        return Err(format!("Keyword `{}` is not allowed in `<{}>` blocks", input.keyword, block_type.name));
+    }
 
     Ok(ResolvedExpression::KeywordCall(KeywordCall {
         keyword,

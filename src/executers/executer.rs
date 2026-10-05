@@ -1,10 +1,16 @@
+use std::sync::{Arc, Mutex};
+
 use colored::Colorize;
 
 use crate::{
-    executers::ExcuterOutput::{self, Error, ValidNone, ValidSome}, symbolresolver::{localstate::LocalState, symbol_resolver::{ResolvedBlock, ResolvedExpression, SharedExpression}},
+    executers::ExcuterOutput::{self, Error, ValidNone, ValidSome}, symbolresolver::{localstate::LocalState, symbol_resolver::{Closure, ResolvedBlock, ResolvedExpression, SharedExpression}},
 };
 
-pub fn executer(input: Vec<ResolvedBlock>) {
+pub fn executer(mut input: Vec<ResolvedBlock>) {
+
+    input.retain(|block| block.block_type.execution_order != 0);
+    input.sort_by_key(|block| block.block_type.execution_order);
+
     for block in input {
         for content in block.resolved_lines {
             if let Error(message) = execute(content) {
@@ -30,6 +36,12 @@ fn execute_in_state(input: ResolvedExpression, local_state: &mut LocalState) -> 
             let mut args: Vec<SharedExpression> = Vec::new();
 
             for arg in call.args {
+                //? Closures are passed as they are, the keyword decides when (and if) they run
+                if let ResolvedExpression::Closure(closure) = arg {
+                    args.push(Arc::new(Mutex::new(closure)));
+                    continue;
+                }
+
                 match execute_in_state(arg, local_state) {
                     ValidSome(expression) => args.push(expression),
                     ValidNone => {
@@ -66,20 +78,23 @@ fn execute_in_state(input: ResolvedExpression, local_state: &mut LocalState) -> 
             into.redirect(from)
         }
 
-        ResolvedExpression::Closure(mut closure) => {
-            closure.local_state = match local_state.fork() {
-                Ok(state) => state,
-                Err(message) => return Error(message),
-            };
+        ResolvedExpression::Closure(mut closure) => execute_closure(&mut closure, local_state),
+    }
+}
 
-            for expression in closure.contents {
-                match execute_in_state(expression, &mut closure.local_state) {
-                    Error(message) => return Error(message),
-                    ValidNone | ValidSome(_) => {}
-                }
-            }
+pub fn execute_closure(closure: &mut Closure, local_state: &mut LocalState) -> ExcuterOutput {
+    closure.local_state = match local_state.fork() {
+        Ok(state) => state,
+        Err(message) => return Error(message),
+    };
 
-            ValidNone
+    // //! std::mem::take empties closure.contents, so a closure can only run once (needs changing for loops)
+    for expression in std::mem::take(&mut closure.contents) {
+        match execute_in_state(expression, &mut closure.local_state) {
+            Error(message) => return Error(message),
+            ValidNone | ValidSome(_) => {}
         }
     }
+
+    ValidNone
 }

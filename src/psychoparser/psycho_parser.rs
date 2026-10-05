@@ -346,6 +346,10 @@ fn split_arguments(contents: &str) -> Vec<&str> {
 
             ')' => depth -= 1,
 
+            '{' => depth += 1,
+
+            '}' => depth -= 1,
+
             ',' if depth == 0 => {
                 out.push(contents[start..i].trim());
                 start = i + 1;
