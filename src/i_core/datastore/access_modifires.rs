@@ -1,8 +1,11 @@
-use crate::{executers::ExcuterOutput, i_core::datastore::helpers::{get_variable, string_expression, take_first_argument}, symbolresolver::{localstate::LocalState, symbol_resolver::SharedExpression}};
+use std::collections::HashSet;
 
-#[derive(Debug, Clone)]
+use crate::{executers::ExcuterOutput, i_core::{datastore::helpers::{get_variable, string_expression, take_first_argument, update_variable}, value::Value}, symbolresolver::{localstate::LocalState, symbol_resolver::SharedExpression}};
+
+#[derive(Hash, Eq, PartialEq, Debug, Clone)]
 pub enum AccessModifires {
-
+    Mutabl,
+    OneTimeMutabl,
 }
 
 pub fn i_get_acmods(mut args: Vec<SharedExpression>, _local_state: &mut LocalState) -> ExcuterOutput {
@@ -19,6 +22,39 @@ pub fn i_get_acmods(mut args: Vec<SharedExpression>, _local_state: &mut LocalSta
             ExcuterOutput::ValidSome(string_expression(out))
         }
         Ok(None) => ExcuterOutput::ValidNone,
+        Err(message) => ExcuterOutput::Error(message),
+    }
+}
+
+pub fn i_set_acmods(mut args: Vec<SharedExpression>, _local_state: &mut LocalState) -> ExcuterOutput {
+    let Some(arg) = take_first_argument(&mut args) else {
+        return ExcuterOutput::Error("`get_AcMods` requires one argument".to_string());
+    };
+
+    let mut to_set: HashSet<AccessModifires> = HashSet::new();
+
+    for arg in args {
+        let value = match arg.lock() {
+            Ok(guard) => guard.as_any().downcast_ref::<Value>().cloned(),
+            Err(_) => return ExcuterOutput::Error("Could not lock access modifier".to_string()),
+        };
+
+        match value {
+            Some(Value::String(s)) => {
+                if s.is_none() {
+                    return ExcuterOutput::Error("Value has to be set for this operation".to_string());
+                }
+                if s.unwrap().to_uppercase().trim() == "MUTABL" {
+                    to_set.insert(AccessModifires::Mutabl);
+                }
+            }
+            _ => return ExcuterOutput::Error("`set_AcMods` requires string modifiers".to_string()),
+        }
+    }
+
+    match update_variable(&arg, |var| var.access_modifires = to_set) {
+        Ok(true) => ExcuterOutput::ValidNone,
+        Ok(false) => ExcuterOutput::ValidNone,
         Err(message) => ExcuterOutput::Error(message),
     }
 }

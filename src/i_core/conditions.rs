@@ -28,7 +28,11 @@ pub fn i_if(mut args: Vec<SharedExpression>, local_state: &mut LocalState) -> Ex
         return ExcuterOutput::Error("`if` requires a closure as its second argument".to_string());
     };
 
-    if condition {
+    if condition.is_none() {
+        return ExcuterOutput::Error("Value has to be set for this operation".to_string());
+    }
+
+    if condition.unwrap() {
         return execute_closure(closure, local_state);
     }
 

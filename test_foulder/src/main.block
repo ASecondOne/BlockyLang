@@ -1,9 +1,25 @@
 <define>
     let a = 5;
+    let b;
+    let string = "String".new();
+    let number = "Number".new();
+    let bool = "Bool".new();
 </define>
 
 <execute>
     println "start";
+
+    println string.type();
+    println number.type();
+    println bool.type();
+
+    b.set_AcMods("mutabl");
+
+    println "67";
+    
+    println b.get_AcMods();
+
+    b = 6;
 
     if true, {
         println "true works";
@@ -11,6 +27,13 @@
 
     if false, {
         println "this should not print";
+    }
+
+    a.set_AcMods("mutabl");
+    println a.get_AcMods();
+
+    {
+        
     }
 
     if true, {

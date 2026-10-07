@@ -390,13 +390,17 @@ fn prep(src: &str) -> String {
 
     for c in src.chars() {
         if c == '"' {
-            if !string
-                && out
+            if !string {
+                if space && !out.ends_with('\n') {
+                    out.push(' ');
+                } else if out
                     .chars()
                     .last()
-                    .is_some_and(|c| c.is_alphanumeric())
-            {
-                out.push(' ');
+                    .is_some_and(|previous| previous.is_alphanumeric())
+                {
+                    out.push(' ');
+                }
+                space = false;
             }
 
             string = !string;

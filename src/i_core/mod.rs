@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use crate::{i_core::{conditions::i_if, datastore::{access_modifires::i_get_acmods, var::{i_let, i_origin, i_transfer, i_type}, variable_parse}, math::i_inc_one, stdout::i_println, value::value_parser}, symbolresolver::symbol_resolver::{BlockType, ExpressionParser, Keyword}};
+use crate::{i_core::{conditions::i_if, datastore::{access_modifires::{i_get_acmods, i_set_acmods}, var::{i_let, i_origin, i_transfer, i_type}, variable_parse}, math::i_inc_one, stdout::{i_print, i_println}, value::{i_new, value_parser}}, symbolresolver::symbol_resolver::{BlockType, ExpressionParser, Keyword}};
 
-mod value;
+pub(crate) mod value;
 mod math;
 mod stdout;
 mod conditions;
@@ -43,6 +43,11 @@ pub fn gather_keywords() -> Vec<Keyword> {
     });
 
     out.push(Keyword { 
+        origin: "i_core::stdout::print".to_string(), 
+        execute: i_print
+    });
+
+    out.push(Keyword { 
         origin: "i_core::math::inc_one".to_string(), 
         execute: i_inc_one 
     });
@@ -72,6 +77,16 @@ pub fn gather_keywords() -> Vec<Keyword> {
         execute: i_get_acmods 
     });
 
+    out.push(Keyword { 
+        origin: "i_core::datastore::access_modifires::set_AcMods".to_string(), 
+        execute: i_set_acmods 
+    });
+
+    out.push(Keyword { 
+        origin: "i_core::value::new".to_string(), 
+        execute: i_new 
+    });
+
     out
 }
 
@@ -90,7 +105,7 @@ pub fn gather_blocktypes() -> Vec<Arc<BlockType>> {
     out.push(Arc::new(BlockType {
         name: "define".to_string(),
         symbol_blacklist: vec![],
-        symbol_whitelist: vec!["i_core::datastore::var::let".to_string()],
+        symbol_whitelist: vec!["i_core::datastore::var::let".to_string(), "i_core::value::new".to_string()],
         execution_order: 1,
     }));
 

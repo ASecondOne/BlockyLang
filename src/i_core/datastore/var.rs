@@ -1,6 +1,6 @@
 // PATH: i_core::datastore::var::*
 
-use std::sync::{Arc, Mutex};
+use std::{collections::HashSet, sync::{Arc, Mutex}};
 
 use crate::{executers::ExcuterOutput, i_core::{datastore::{access_modifires::AccessModifires, helpers::{get_value, get_variable, string_expression, take_first_argument}}, value::Value}, symbolresolver::{localstate::LocalState, symbol_resolver::{Expression, SharedExpression}}};
 
@@ -14,7 +14,7 @@ pub struct Variable {
     pub root: String,
     /// Identity of this particular copy in its current scope.
     pub identity: String,
-    pub access_modifires: Vec<AccessModifires>,
+    pub access_modifires: HashSet<AccessModifires>,
     pub value: Value,
 }
 
@@ -36,14 +36,30 @@ impl Expression for Variable {
     }
 
     fn redirect(&mut self, new: SharedExpression) -> ExcuterOutput {
-        let new = match new.lock() {
+        let mut new = match new.lock() {
             Ok(new) => new,
             Err(_) => return ExcuterOutput::Error("Could not lock redirect value".to_string()),
         };
 
-        if let Some(new_value) = new.as_any().downcast_ref::<Value>() {
-            self.value = new_value.clone(); // //! Somehow get rid of clone
-            return ExcuterOutput::ValidNone;
+        if !self.access_modifires.contains(&AccessModifires::Mutabl) {
+
+            if self.access_modifires.contains(&AccessModifires::OneTimeMutabl) {
+                self.access_modifires.remove(&AccessModifires::OneTimeMutabl);
+                
+            } else {
+                return ExcuterOutput::Error("Variable requires Mutabl access modifier to be changed".to_string());
+            }
+        } 
+
+        if let Some(new_value) = new.as_any_mut().downcast_mut::<Value>() {
+            if std::mem::discriminant(new_value) == std::mem::discriminant(&self.value) ||
+                &self.value == &Value::default()
+            {
+                self.value = std::mem::take(new_value);
+                return ExcuterOutput::ValidNone;
+            } else {
+                return ExcuterOutput::Error("The new value must match the old one".to_string());
+            }
         }
         
         ExcuterOutput::Error("A variable can only receive a value".to_string())
@@ -110,7 +126,7 @@ fn type_matcher(value: &Value) -> ExcuterOutput {
             &Value::Boolean(_) => return ExcuterOutput::ValidSome(
                 Arc::new(
                     Mutex::new(
-                            Value::String("Boolean".to_string())
+                            Value::String(Some("Boolean".to_string()))
                         )
                     )
                 ),
@@ -118,7 +134,7 @@ fn type_matcher(value: &Value) -> ExcuterOutput {
             &Value::String(_) => return ExcuterOutput::ValidSome(
                 Arc::new(
                     Mutex::new(
-                            Value::String("String".to_string())
+                            Value::String(Some("String".to_string()))
                         )
                     )
                 ),
@@ -126,7 +142,7 @@ fn type_matcher(value: &Value) -> ExcuterOutput {
             &Value::Number(_) => return ExcuterOutput::ValidSome(
                 Arc::new(
                     Mutex::new(
-                            Value::String("Number".to_string())
+                            Value::String(Some("Number".to_string()))
                         )
                     )
                 ),
@@ -134,7 +150,7 @@ fn type_matcher(value: &Value) -> ExcuterOutput {
             &Value::Undefined => return ExcuterOutput::ValidSome(
                 Arc::new(
                     Mutex::new(
-                            Value::String("Undefined".to_string())
+                            Value::String(Some("Undefined".to_string()))
                         )
                     )
                 ),

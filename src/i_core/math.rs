@@ -26,7 +26,10 @@ pub fn i_inc_one(mut args: Vec<SharedExpression>, _local_state: &mut LocalState)
     };
 
     if let Value::Number(n) = value {
-        return ExcuterOutput::ValidSome(Arc::new(Mutex::new(Value::Number(n + 1))));
+        if n.is_none() {
+            return ExcuterOutput::Error("Value has to be set for this operation".to_string());
+        }
+        return ExcuterOutput::ValidSome(Arc::new(Mutex::new(Value::Number(Some(n.unwrap() + 1)))));
     }
 
     ExcuterOutput::Error("`inc_one` requires a number".to_string())

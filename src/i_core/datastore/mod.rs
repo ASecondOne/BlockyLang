@@ -32,14 +32,17 @@ pub fn variable_parse(input: &str) -> Option<SharedExpression> {
         }
     }
 
-    let var = Variable {
+    let mut var = Variable {
         name: input.to_string(),
         origin: String::new(),
         root: String::new(),
         identity: String::new(),
-        access_modifires: Vec::new(),
+        access_modifires: HashSet::new(),
         value: super::value::Value::Undefined,
     };
+
+    // * Needed so the first redirect can cautomatically set the value type
+    var.access_modifires.insert(access_modifires::AccessModifires::OneTimeMutabl);
 
     let var: SharedExpression = Arc::new(Mutex::new(var));
 

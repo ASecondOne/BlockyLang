@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 use colored::Colorize;
 
 use crate::executers::ExcuterOutput;
+use crate::i_core::value::Value;
 use crate::i_core::datastore::{var::Variable, ASSUMEND_VARIABLES};
 use crate::i_core::{gather_blocktypes, gather_expression_parsers, gather_keywords};
 use crate::psychoparser::psycho_parser::{PsychoBlock, PsychoCall, PsychoExpression};
@@ -172,12 +173,28 @@ fn resolve_individual_line(input: &PsychoExpression, block_type: &BlockType) -> 
         }
 
         PsychoExpression::Call(c) => {
-            resolve_call(c, block_type)
+            let call = resolve_call(c, block_type)?;
+
+            if matches!(&call, ResolvedExpression::KeywordCall(call)
+                if call.keyword.origin == "i_core::datastore::var::let" && call.args.len() == 1)
+            {
+                return Ok(ResolvedExpression::Redirect(
+                    Box::new(call),
+                    Box::new(ResolvedExpression::Expression(Arc::new(Mutex::new(
+                        Value::Undefined,
+                    )))),
+                ));
+            }
+
+            Ok(call)
         }
 
         PsychoExpression::Redirect(into, from) => {
             Ok(ResolvedExpression::Redirect(
-                Box::new(resolve_individual_line(into, block_type)?),
+                Box::new(match into.as_ref() {
+                    PsychoExpression::Call(call) => resolve_call(call, block_type)?,
+                    _ => resolve_individual_line(into, block_type)?,
+                }),
                 Box::new(resolve_individual_line(from, block_type)?),
             ))
         }

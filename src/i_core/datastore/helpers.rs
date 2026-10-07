@@ -20,6 +20,18 @@ pub fn get_variable(expression: &SharedExpression) -> Result<Option<Variable>, S
     Ok(expression.as_any().downcast_ref::<Variable>().cloned())
 }
 
+pub fn update_variable(expression: &SharedExpression, update: impl FnOnce(&mut Variable)) -> Result<bool, String> {
+    let mut expression = expression
+        .lock()
+        .map_err(|_| "Could not lock variable".to_string())?;
+
+    let Some(variable) = expression.as_any_mut().downcast_mut::<Variable>() else {
+        return Ok(false);
+    };
+    update(variable);
+    Ok(true)
+}
+
 pub fn get_value(expression: &SharedExpression) -> Result<Option<Value>, String> {
     let expression = expression
         .lock()
@@ -28,5 +40,5 @@ pub fn get_value(expression: &SharedExpression) -> Result<Option<Value>, String>
 }
 
 pub fn string_expression(value: impl Into<String>) -> SharedExpression {
-    Arc::new(Mutex::new(Value::String(value.into())))
+    Arc::new(Mutex::new(Value::String(Some(value.into()))))
 }
