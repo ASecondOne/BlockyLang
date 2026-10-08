@@ -1,0 +1,51 @@
+{
+  "scopeName": "source.blocky",
+  "patterns": [
+    {"include": "#string"},
+    {"include": "#blockTags"},
+    {"include": "#keywords"},
+    {"include": "#types"},
+    {"include": "#constants"},
+    {"include": "#numbers"},
+    {"include": "#operators"},
+    {"include": "#calls"}
+  ],
+  "repository": {
+    "string": {
+      "name": "string.quoted.double.blocky",
+      "begin": "\"",
+      "end": "\""
+    },
+    "blockTags": {
+      "name": "meta.tag.blocky",
+      "match": "</?[A-Za-z_][A-Za-z0-9_]*>",
+      "captures": {
+        "0": {"name": "entity.name.tag.blocky"}
+      }
+    },
+    "keywords": {
+      "name": "keyword.control.blocky",
+      "match": "\\b(if|let|mut|transfer|new|type|origin|inc_one|print|println|get_AcMods|set_AcMods)\\b"
+    },
+    "constants": {
+      "name": "constant.language.blocky",
+      "match": "\\b(true|false|Undefined)\\b"
+    },
+    "types": {
+      "name": "storage.type.blocky",
+      "match": "\\b(String|Number|Bool|Boolean)\\b"
+    },
+    "numbers": {
+      "name": "constant.numeric.blocky",
+      "match": "(?<![A-Za-z_])-?\\b[0-9]+\\b"
+    },
+    "operators": {
+      "name": "keyword.operator.blocky",
+      "match": "="
+    },
+    "calls": {
+      "name": "entity.name.function.blocky",
+      "match": "(?<=\\.)[A-Za-z_][A-Za-z0-9_]*|\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*(?:\\(|\\s))"
+    }
+  }
+}

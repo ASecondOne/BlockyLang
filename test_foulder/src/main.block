@@ -1,59 +1,74 @@
 <define>
-    let a = 5;
-    let b;
-    let string = "String".new();
-    let number = "Number".new();
-    let bool = "Bool".new();
+    let counter, Number = 1;
+    let unset;
+    let inferred = "String".new();
+    let text, String;
+    let score, Number;
+    let enabled, Bool;
+    let initialized, String = "Typed initializer";
+    
+    mut counter;
+    mut text;
+    mut score;
+    mut enabled;
 </define>
 
 <execute>
-    println "start";
+    println "Values and output";
+    println unset;
+    println text;
+    println text.type();
+    println score.type();
+    println enabled.type();
 
-    println string.type();
-    println number.type();
-    println bool.type();
+    text = "Blocky Lang";
+    score = 42;
+    enabled = true;
+    inferred.set_AcMods("mutabl");
+    inferred = "Initialized with new";
+    println initialized;
 
-    b.set_AcMods("mutabl");
+    print "print stays on this line; ";
+    println text;
+    println score;
+    println enabled;
 
-    println "67";
-    
-    println b.get_AcMods();
+    println "Calls and inspection";
+    println inc_one 4;
+    println(inc_one(5));
+    println 42.type();
+    println text.origin();
+    println text.get_AcMods();
+    i_core::stdout::println "Full keyword paths work too";
 
-    b = 6;
-
-    if true, {
-        println "true works";
-    }
+    counter.set_AcMods("mutabl");
+    counter = inc_one counter;
+    println counter;
 
     if false, {
-        println "this should not print";
+        println "This branch does not run";
     }
 
-    a.set_AcMods("mutabl");
-    println a.get_AcMods();
+    println "Nested closures transfer one level at a time";
+    if true, {
+        println "This closure runs";
+        counter = inc_one counter;
+        if true, {
+            counter = inc_one counter;
+            transfer counter;
+        }
+        println "After inner transfer:";
+        println counter;
+        transfer counter;
+    }
+
+    println "After outer transfer:";
+    println counter;
 
     {
-        
+        counter = 99;
+        println counter;
     }
 
-    if true, {
-        if true, {
-            println "nested true works";
-        }
-
-        if false, {
-            println "nested false should not print";
-        }
-    }
-
-    if true, {
-        println "first line in closure";
-        println "second line in closure";
-    }
-
-    println "end";
-
-    a = inc_one a;
-
-    println a;
+    println counter;
 </execute>

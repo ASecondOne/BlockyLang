@@ -2,133 +2,110 @@
 
 ## Values
 
-| Kind | Written as | Printed as |
-|------|------------|------------|
+Blocky has strings, numbers, booleans, and `Undefined`:
+
+| Kind | Literal or constructor | Display |
+|------|------------------------|---------|
 | String | `"hello"` | `hello` |
 | Number | `42`, `-1` | `42` |
 | Boolean | `true`, `false` | `true` / `false` |
-| Undefined | (default for new variables) | `Undefined` |
+| Undefined | an empty `let`, or an unset typed value | `Undefined` |
+
+Typed unset values can be created with `.new()`:
 
 ```blocky
+<define>
+    let text = "String".new();
+    let count = "Number".new();
+    let enabled = "Bool".new();
+</define>
 <execute>
-    println "hello";
-    println 42;
-    println true;
+    println text;
+    println count;
+    println enabled;
+    println text.type();
+    println count.type();
+    println enabled.type();
 </execute>
 ```
 
-## Variables
+The first three lines display `Undefined`; the type checks display `String`, `Number`, and `Boolean`. Set a typed value with a matching value kind. To assign after its declaration initializer, grant `Mutabl` first.
 
-### Declaring
+## Declaring variables
 
-Variables must be declared with `let` inside a `<define>` block before you use them:
+Declare variables in `<define>` with `let`:
 
 ```blocky
 <define>
-    let x;
-    let n;
+    let name;
+    let score = 10;
+    let title, String;
+    let retries, Number = 3;
+    let ready, Bool = false;
 </define>
 ```
 
-You can also assign in the same `let` line:
+The first argument is always the variable name; the optional second argument after a comma is its type (`String`, `Number`, or `Bool`). An initializer may follow the type. An untyped empty declaration initializes to `Undefined`. The internal `OneTimeMutabl` permission is used for initialization and is not a modifier to pass to `set_AcMods`.
+
+Every variable must be declared before use. An unknown name causes a resolver error and prevents execution.
+
+## Assigning values
+
+Use `=` to redirect a value into a variable. The first assignment establishes the value kind for an untyped variable; a typed declaration already fixes it. Later assignments must use the same kind and require `Mutabl`:
 
 ```blocky
 <define>
-    let a = 5;
-    let s = "hi";
-</define>
-```
-
-Using a name that was never declared fails before the program runs:
-
-```text
-Resolver error: Variables do not exist: y
-```
-
-### Assigning
-
-Use `=` to store a value:
-
-```blocky
-<define>
-    let x;
+    let score = 10;
 </define>
 <execute>
-    x = 10;
-    x = "hi";
-    x = true;
-    x = inc_one 5;
+    score.set_AcMods("mutabl");
+    score = 20;
+    println score;
 </execute>
 ```
 
-You can only assign **into a variable**. Assigning into a bare value fails.
-
-### Reading
-
-Pass the variable to keywords such as `println`, `type`, or `origin`:
+For a typed unset variable, the assigned value must match its declared type:
 
 ```blocky
 <define>
-    let x;
+    let title = "String".new();
 </define>
 <execute>
-    println x;
+    title.set_AcMods("mutabl");
+    title = "Blocky";
+    println title;
 </execute>
 ```
 
-```text
-Undefined
-```
+Assigning a different value kind is an execution error. Values themselves are not assignment targets.
+
+## Reading and inspecting variables
+
+`println` displays a variable's current value. The `type` keyword returns `String`, `Number`, `Boolean`, or `Undefined`; `origin` returns the declaration path, usually `define/<name>`.
 
 ```blocky
 <define>
-    let x;
+    let score = 10;
 </define>
 <execute>
-    x = 10;
-    println x;
-    println type x;
-    println origin x;
+    println score;
+    println score.type();
+    println score.origin();
 </execute>
 ```
 
-```text
-10
-Number
-define/x
-```
+## Access modifiers
 
-### Two variables
+Use `mut name;` to add the `Mutabl` modifier concisely. `set_AcMods("mutabl")` is also available and replaces the modifier set. `get_AcMods` returns a string describing the current set. `OneTimeMutabl` is an internal initialization permission and should not be passed to `set_AcMods`.
 
 ```blocky
 <define>
-    let a;
-    let b;
+    let score = 10;
+    mut score;
 </define>
 <execute>
-    a = 1;
-    b = inc_one 1;
-    println a;
-    println b;
+    println score.get_AcMods();
 </execute>
 ```
 
-```text
-1
-2
-```
-
-## Inspecting values
-
-- `type …` — returns `String`, `Number`, `Boolean`, or `Undefined`
-- `origin …` — returns where the variable was declared (for example `define/x`)
-- `get_AcMods …` — access modifiers (empty for now)
-
-## Scope note
-
-At the top level of `<execute>`, assignments change the variable itself. Inside a closure `{ ... }`, assignments usually change a **local copy** unless you `transfer` — see [closures-and-scope.md](closures-and-scope.md).
-
-## Current limitations
-
-- No access modifiers yet (`get_AcMods` prints blank).
-- No way to undeclare or rename a variable.
+Inside a closure, variable changes are local unless transferred outward. See [closures-and-scope.md](closures-and-scope.md).

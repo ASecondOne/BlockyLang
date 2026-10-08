@@ -1,6 +1,6 @@
 # Blocky Lang docs
 
-Blocky Lang is a small toy language. Programs are made of **blocks** (like `<execute>` and `<define>`) that contain lines ending in `;`. Lines call **keywords** such as `println` and `if`.
+Blocky Lang is a small toy language. Programs use `<define>` and `<execute>` blocks, semicolon-separated statements, typed values, variables, keyword calls, and closures.
 
 ## Quick start
 
@@ -42,7 +42,7 @@ Minimal program:
 
 - A closure can only run **once**.
 - Parentheses are for calls like `foo(bar)`, **not** for grouping — `println (5)` fails.
-- `"hi".println()` after normal indentation is unreliable; use `println "hi";` or `x.println();` after assigning the string.
-- `get_AcMods` currently prints a blank line (no access modifiers exist yet).
+- `mut name;` adds ongoing assignment permission; `set_AcMods` currently recognizes only `"mutabl"`. `OneTimeMutabl` is reserved for initialization.
 - `blocky.toml` `[imports]` / `[unimportes]` are not used yet.
 - All `src/*.block` files are treated as one combined program.
+- There is no comment syntax.

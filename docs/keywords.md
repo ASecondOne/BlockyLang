@@ -1,443 +1,174 @@
 # Keywords
 
-You can call a keyword by its **short name** (for example `println`) or by its **full path** (for example `i_core::stdout::println`).
-
----
+Keywords can be called by short name or full path. Calls accept space, parentheses, and dot notation; `receiver.method()` passes the receiver as the first argument. See [syntax.md](syntax.md).
 
 ## `if`
 
-**Full path:** `i_core::conditons::if`  
-(The path really is spelled `conditons` — the short name `if` still works.)
+**Full path:** `i_core::conditons::if`
 
-**Arguments:** exactly 2
-
-1. A condition: `true` or `false`.
-2. A closure `{ ... }` — run only when the condition is true.
-
-**Behavior:** If the condition is `true`, runs the closure. If `false`, does nothing.
-
-**Errors:**
-
-- Wrong number of arguments: `` `if` requires a condition and a closure ``
-- Condition not a boolean: `` `if` condition has to be `true` or `false` ``
-- Second argument not a closure: `` `if` requires a closure as its second argument ``
-
-**Example:**
+Takes a boolean and a closure. Runs the closure when the boolean is `true`; does nothing when it is `false`. A typed but unset boolean is an error.
 
 ```blocky
 <execute>
     if true, {
-        println "yes";
+        println "runs";
     }
     if false, {
-        println "no";
+        println "does not run";
     }
 </execute>
 ```
 
-```text
-yes
-```
+## `print` and `println`
 
-Nested `if`:
+**Full paths:** `i_core::stdout::print`, `i_core::stdout::println`
 
-```blocky
-<execute>
-    if true, {
-        if true, {
-            println "nested true works";
-        }
-        if false, {
-            println "nested false should not print";
-        }
-    }
-</execute>
-```
-
----
-
-## `println`
-
-**Full path:** `i_core::stdout::println`
-
-**Arguments:** one value or variable to print
-
-**Behavior:** Prints the argument followed by a newline.
-
-| Argument | Printed as |
-|----------|------------|
-| String | the text |
-| Number | digits |
-| Boolean | `true` / `false` |
-| Variable | its current value (or `Undefined` if unset) |
-
-**Errors:**
-
-- Missing argument (when actually called with no args): `` `println` requires one argument ``
-- Cannot display the argument: `` `println` could not display its argument ``
-
-**Examples:**
+Each takes a value or variable. `print` writes without a newline; `println` adds a newline. An unset value displays as `Undefined`.
 
 ```blocky
 <execute>
-    println "hello block";
+    print "Hello ";
+    println "Blocky";
     println 42;
-    println true;
 </execute>
 ```
-
-```text
-hello block
-42
-true
-```
-
-```blocky
-<define>
-    let x;
-</define>
-<execute>
-    x = 10;
-    println x;
-</execute>
-```
-
-```text
-10
-```
-
-Dot form:
-
-```blocky
-<define>
-    let x;
-</define>
-<execute>
-    x = "hi";
-    x.println();
-</execute>
-```
-
-```text
-hi
-```
-
----
 
 ## `inc_one`
 
 **Full path:** `i_core::math::inc_one`
 
-**Arguments:** one number — either a number literal, or a variable whose current value is a number.
-
-**Behavior:** Returns that number plus one. Does **not** change a variable in place; assign the result if you want to update it (`n = inc_one n`).
-
-**Errors:**
-
-- Missing argument: `` `inc_one` requires one argument ``
-- Argument is neither a number value nor a variable: `` `inc_one` requires a number or a variable ``
-- Variable or value is not a number (for example a string): `` `inc_one` requires a number ``
-
-**Examples:**
-
-Number literal:
+Takes a number value or a variable containing a number and returns a new number one greater. It does not mutate a variable by itself; assign the result back to update one. An unset number is an error.
 
 ```blocky
+<define>
+    let count = 4;
+</define>
 <execute>
     println inc_one 5;
-    println inc_one(5);
+    count.set_AcMods("mutabl");
+    count = inc_one count;
+    println count;
 </execute>
 ```
-
-```text
-6
-6
-```
-
-Variable as argument:
-
-```blocky
-<define>
-    let n = 5;
-</define>
-<execute>
-    println inc_one n;
-</execute>
-```
-
-```text
-6
-```
-
-Update a variable by assigning the result back (does not mutate in place by itself):
-
-```blocky
-<define>
-    let n = 5;
-</define>
-<execute>
-    n = inc_one n;
-    n = inc_one n;
-    println n;
-</execute>
-```
-
-```text
-7
-```
-
-Inside a closure (still reads the variable; still does not assign unless you write `=`):
-
-```blocky
-<define>
-    let n = 5;
-</define>
-<execute>
-    n = inc_one n;
-    n = inc_one n;
-    if true, {
-        println inc_one n;
-    }
-</execute>
-```
-
-```text
-8
-```
-
-A variable that does not hold a number fails:
-
-```blocky
-<define>
-    let s = "hi";
-</define>
-<execute>
-    println inc_one s;
-</execute>
-```
-
-```text
-Execution error: `inc_one` requires a number
-```
-
----
 
 ## `let`
 
 **Full path:** `i_core::datastore::var::let`
 
-**Arguments:** one variable name
-
-**Allowed only in** `<define>` blocks.
-
-**Behavior:** Declares the variable so the rest of the program may use it. Does not assign a value (new variables start as `Undefined`).
-
-**Errors:**
-
-- Missing / invalid name: `` `let` requires a variable name ``
-- Used in `<execute>`: `` Keyword `let` is not allowed in `<execute>` blocks ``
-- Using a name that was never declared: `` Variables do not exist: name ``
-
-**Examples:**
-
-Declare only (value starts as `Undefined`):
+Declares one variable and is allowed only in `<define>`. The first argument is the variable name. An optional second argument after a comma declares its type: `String`, `Number`, or `Bool`. An initializer may follow the type. Empty declarations initialize to `Undefined` or an unset typed value, consuming the internal one-time initialization permission.
 
 ```blocky
 <define>
-    let x;
+    let unset;
+    let answer = 42;
+    let title, String;
+    let retries, Number = 3;
 </define>
-<execute>
-    println x;
-</execute>
 ```
 
-```text
-Undefined
-```
+## `mut`
 
-Declare and assign in one line (allowed in `<define>`):
+**Full path:** `i_core::datastore::access_modifires::mut`
+
+Takes one variable and adds the ongoing `Mutabl` modifier without replacing any other modifiers. It is allowed in `<define>` and `<execute>` blocks. `OneTimeMutabl` is reserved for initialization.
 
 ```blocky
 <define>
-    let a = 5;
+    let count, Number = 1;
+    mut count;
 </define>
 <execute>
-    println a;
+    count = 2;
 </execute>
 ```
-
-```text
-5
-```
-
----
 
 ## `type`
 
 **Full path:** `i_core::datastore::var::type`
 
-**Arguments:** one variable or value
-
-**Behavior:** Returns a string naming the kind of value: `Boolean`, `String`, `Number`, or `Undefined`.
-
-**Errors:**
-
-- Missing argument: `` `type` requires a variable name ``
-- Not a variable or value: `` `type` requires a variable or value ``
-
-**Example:**
+Returns the variable/value kind as a string: `String`, `Number`, `Boolean`, or `Undefined`. Typed unset values report their declared kind.
 
 ```blocky
 <define>
-    let x;
+    let text = "String".new();
 </define>
 <execute>
-    x = "hi";
-    println type x;
-    x = 7;
-    println type x;
-    println type true;
-    println type 99;
+    println text.type();
+    println type 42;
 </execute>
 ```
-
-```text
-String
-Number
-Boolean
-Number
-```
-
-Unset variable:
-
-```blocky
-<define>
-    let x;
-</define>
-<execute>
-    println type x;
-</execute>
-```
-
-```text
-Undefined
-```
-
----
 
 ## `origin`
 
 **Full path:** `i_core::datastore::var::origin`
 
-**Arguments:** one variable
-
-**Behavior:** Returns a string describing where the variable was declared. After `let` in a define block, that is typically `define/<name>`.
-
-**Errors:**
-
-- Missing / not a variable: `` `origin` requires a variable name ``
-
-**Example:**
+Returns the variable's declaration path as a string, typically `define/name`.
 
 ```blocky
 <define>
-    let x;
+    let answer = 42;
 </define>
 <execute>
-    println origin x;
+    println answer.origin();
 </execute>
 ```
 
-```text
-define/x
+## `new`
+
+**Full path:** `i_core::value::new`
+
+Takes a string naming a type and returns an unset value of that type. Supported names are `String`, `Number`, and `Bool` (case-insensitive). The dot form is convenient because the type string is passed as the receiver: `"String".new()`.
+
+```blocky
+<define>
+    let text = "String".new();
+    let count = "Number".new();
+    let enabled = "Bool".new();
+</define>
 ```
 
----
+The returned value displays as `Undefined` until assigned. Assigning into a typed unset variable still requires its matching type; grant `Mutabl` before a later assignment.
+
+## `get_AcMods` and `set_AcMods`
+
+**Full paths:** `i_core::datastore::access_modifires::get_AcMods`, `i_core::datastore::access_modifires::set_AcMods`
+
+`get_AcMods` returns the access modifiers as a string. `set_AcMods` takes a variable followed by modifier strings; `"mutabl"` enables ongoing assignment. `OneTimeMutabl` is an internal initializer permission and is not set through this keyword.
+
+```blocky
+<define>
+    let count = 1;
+</define>
+<execute>
+    count.set_AcMods("mutabl");
+    println count.get_AcMods();
+    count = 2;
+</execute>
+```
 
 ## `transfer`
 
 **Full path:** `i_core::datastore::var::transfer`
 
-**Arguments:** exactly one variable
-
-**Behavior:** Must be called **inside a closure**. Copies the local variable’s value back to the outer variable. Needed because assignments inside a closure normally only change a local copy (see [closures-and-scope.md](closures-and-scope.md)).
-
-**Errors:**
-
-- Wrong number of arguments: `` `transfer` requires one variable `` / `` `transfer` accepts one variable ``
-- Outside a closure: `` `transfer` must be called inside a closure ``
-
-**Example:**
+Takes one variable and must run inside a closure. It copies the local variable's current value and access modifiers to its immediate origin. In nested closures, transfer one level at a time.
 
 ```blocky
 <define>
-    let x;
+    let count = 1;
 </define>
 <execute>
-    x = 1;
+    count.set_AcMods("mutabl");
     if true, {
-        x = 99;
-        transfer x;
+        count = 2;
+        transfer count;
     }
-    println x;
+    println count;
 </execute>
 ```
 
-```text
-99
-```
+See [closures-and-scope.md](closures-and-scope.md) for local-copy behavior and nested transfers.
 
-Without `transfer`, the outer value stays the same:
+## Current limits
 
-```blocky
-<define>
-    let x;
-</define>
-<execute>
-    x = 1;
-    if true, {
-        x = 99;
-        println x;
-    }
-    println x;
-</execute>
-```
-
-```text
-99
-1
-```
-
----
-
-## `get_AcMods`
-
-**Full path:** `i_core::datastore::access_modifires::get_AcMods`
-
-**Arguments:** one variable
-
-**Behavior:** Returns a string describing the variable’s access modifiers. No access modifiers exist yet, so the result is an empty string — `println get_AcMods x` prints a blank line.
-
-**Errors:**
-
-- Missing argument: `` `get_AcMods` requires one argument ``
-
-**Example:**
-
-```blocky
-<define>
-    let x;
-</define>
-<execute>
-    println get_AcMods x;
-</execute>
-```
-
-Output: one empty line.
-
----
-
-## Current limitations
-
-- You cannot define your own keywords yet; only the list above exists.
-- `get_AcMods` has nothing useful to show until access modifiers exist.
+- Keywords are built in; user-defined keywords are not supported.
+- `set_AcMods` currently recognizes only the string `"mutabl"`; `mut name;` is the short form for adding it.

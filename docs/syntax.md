@@ -92,9 +92,10 @@ i_core::stdout::println "via path";
 ```blocky
 x.println();
 println x.type();
+println "hello".type();
 ```
 
-**Limitation:** a string literal written like `"hi".println();` (with normal indentation) often fails. Prefer `println "hi";` or assign the string to a variable first, then use `x.println();`.
+Dot calls also work on string literals. The receiver is passed as the first argument, so `"String".new()` is equivalent to `new "String"`.
 
 ## Literals
 
@@ -123,6 +124,16 @@ Anything else that is not a keyword call is treated as a **variable name**.
 
 - Assigning into a variable stores a value.
 - Assigning into a bare value (for example `5 = 10`) fails.
+- Variables have a one-time initialization allowance. Later assignments require the `Mutabl` access modifier and must preserve the variable's value kind.
+
+In `<define>`, give a variable an explicit type with a comma and optionally add `mut` to permit ongoing assignment:
+
+```blocky
+<define>
+    let name, String = "Blocky";
+    mut name;
+</define>
+```
 
 ## Closures `{ ... }`
 
@@ -137,13 +148,9 @@ if true, {
 
 See [closures-and-scope.md](closures-and-scope.md).
 
-## Comments
-
-There is **no** comment syntax yet.
-
 ## Current limitations
 
 - No math or comparison operators beyond assignment `=` and call/dot syntax.
 - No grouping parentheses.
-- String-dot calls after indentation are unreliable.
 - A bare `println;` (no argument) is not treated as a call.
+- There is no comment syntax.

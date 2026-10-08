@@ -1,0 +1,70 @@
+{
+  "name": "blocky-lang",
+  "displayName": "Blocky Lang",
+  "description": "Syntax highlighting and lightweight language support for Blocky Lang files.",
+  "version": "0.1.0",
+  "publisher": "blocky-lang-local",
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:blocky"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "blocky",
+        "aliases": ["Blocky", "blocky"],
+        "extensions": [".block"],
+        "icon": {
+          "light": "./icons/blocky.svg",
+          "dark": "./icons/blocky.svg"
+        },
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "blocky",
+        "scopeName": "source.blocky",
+        "path": "./syntaxes/blocky.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "blocky.validateDocument",
+        "title": "Blocky: Validate Current File"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "blocky.validateDocument",
+          "when": "resourceLangId == blocky",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Blocky Lang",
+      "properties": {
+        "blocky.inlineDiagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show diagnostic messages inline after the affected line."
+        },
+        "blocky.inlayHints.types": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inferred types after variable names in let declarations."
+        }
+      }
+    }
+  }
+}

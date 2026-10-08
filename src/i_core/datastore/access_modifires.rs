@@ -58,3 +58,21 @@ pub fn i_set_acmods(mut args: Vec<SharedExpression>, _local_state: &mut LocalSta
         Err(message) => ExcuterOutput::Error(message),
     }
 }
+
+pub fn i_mut(mut args: Vec<SharedExpression>, _local_state: &mut LocalState) -> ExcuterOutput {
+    if args.len() != 1 {
+        return ExcuterOutput::Error("`mut` requires one variable".to_string());
+    }
+
+    let Some(variable) = take_first_argument(&mut args) else {
+        return ExcuterOutput::Error("`mut` requires a variable".to_string());
+    };
+
+    match update_variable(&variable, |variable| {
+        variable.access_modifires.insert(AccessModifires::Mutabl);
+    }) {
+        Ok(true) => ExcuterOutput::ValidNone,
+        Ok(false) => ExcuterOutput::Error("`mut` requires a variable".to_string()),
+        Err(message) => ExcuterOutput::Error(message),
+    }
+}

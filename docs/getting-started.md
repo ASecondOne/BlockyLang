@@ -89,7 +89,7 @@ With `run --debug`, before normal output you see:
 
 1. A dump of the parsed program structure.
 2. A dump of the program after names and keywords are resolved.
-3. A separator, then the program’s own `println` output.
+3. A separator, then the program's own `print` and `println` output.
 
 ### Unknown commands
 

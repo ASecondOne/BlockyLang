@@ -69,23 +69,35 @@ When a closure runs, variables you touch inside it become **local copies**. Assi
 
 `transfer` must be called **inside** a closure. Outside one it fails with `` `transfer` must be called inside a closure ``.
 
-## Nested closures
+## Nested closures and `transfer`
 
-Each `if` has its own closure, so nesting works:
+Each `if` has its own closure, so nested closures get nested local states. `transfer` moves a local variable's value up exactly one level. To reach the top-level variable from a nested closure, transfer once in the inner closure and again in its parent:
 
 ```blocky
+<define>
+    let count = 1;
+</define>
 <execute>
+    count.set_AcMods("mutabl");
     if true, {
+        count = inc_one count;
         if true, {
-            println "nested true works";
+            count = inc_one count;
+            transfer count;
         }
+        println count;
+        transfer count;
     }
+    println count;
 </execute>
 ```
 
 ```text
-nested true works
+3
+3
 ```
+
+The inner closure changes its copy from `2` to `3`, then its `transfer` updates the enclosing closure's copy. The second `transfer` updates the top-level variable. Without the outer transfer, the top-level value would remain `1`.
 
 ## A closure can only run once
 

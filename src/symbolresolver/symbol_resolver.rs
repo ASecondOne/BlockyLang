@@ -175,14 +175,32 @@ fn resolve_individual_line(input: &PsychoExpression, block_type: &BlockType) -> 
         PsychoExpression::Call(c) => {
             let call = resolve_call(c, block_type)?;
 
-            if matches!(&call, ResolvedExpression::KeywordCall(call)
-                if call.keyword.origin == "i_core::datastore::var::let" && call.args.len() == 1)
-            {
+            if let ResolvedExpression::KeywordCall(let_call) = &call {
+                if let_call.keyword.origin != "i_core::datastore::var::let"
+                    || !(let_call.args.len() == 1 || let_call.args.len() == 2)
+                {
+                    return Ok(call);
+                }
+
+                let initial_value = if let_call.args.len() == 2 {
+                    let ResolvedExpression::Expression(type_expression) = &let_call.args[1] else {
+                        return Err("`let` type must be a type name".to_string());
+                    };
+                    let type_expression = type_expression
+                        .lock()
+                        .map_err(|_| "Could not lock declared type".to_string())?;
+                    type_expression
+                        .as_any()
+                        .downcast_ref::<Value>()
+                        .cloned()
+                        .ok_or_else(|| "`let` type must be a type name".to_string())?
+                } else {
+                    Value::Undefined
+                };
+
                 return Ok(ResolvedExpression::Redirect(
                     Box::new(call),
-                    Box::new(ResolvedExpression::Expression(Arc::new(Mutex::new(
-                        Value::Undefined,
-                    )))),
+                    Box::new(ResolvedExpression::Expression(Arc::new(Mutex::new(initial_value)))),
                 ));
             }
 
@@ -211,25 +229,40 @@ fn resolve_individual_line(input: &PsychoExpression, block_type: &BlockType) -> 
 
 fn resolve_call(input: &PsychoCall, block_type: &BlockType) -> Result<ResolvedExpression, String> {
     let available_keywords = gather_keywords();
-
-    let resolved_expressions: Vec<ResolvedExpression> = input
-        .expressions
-        .iter()
-        .map(|expression| resolve_individual_line(expression, block_type))
-        .collect::<Result<Vec<_>, _>>()?;
-
-    let matching_keyword = available_keywords
-        .iter()
-        .find(|keyword| keyword.origin.contains(&input.keyword));
-
-    if matching_keyword.is_none() {
-        return Err(format!("Unknown keyword `{}`", input.keyword));
-    }
-
     let keyword = available_keywords
-        .into_iter()
-        .find(|k| k.matches(&input.keyword))
+        .iter()
+        .find(|candidate| candidate.matches(&input.keyword))
         .ok_or_else(|| format!("Unknown keyword `{}`", input.keyword))?;
+
+    let resolved_expressions = if keyword.origin == "i_core::datastore::var::let" {
+        if input.expressions.is_empty() {
+            return Err("`let` requires a variable name".to_string());
+        }
+        if input.expressions.len() > 2 {
+            return Err("`let` accepts a variable name and optional type".to_string());
+        }
+
+        let mut expressions = vec![resolve_individual_line(&input.expressions[0], block_type)?];
+        if let Some(type_expression) = input.expressions.get(1) {
+            let PsychoExpression::Expression(type_name) = type_expression else {
+                return Err("`let` type must be String, Number, or Bool".to_string());
+            };
+            let value = match type_name.trim() {
+                "String" => Value::String(None),
+                "Number" => Value::Number(None),
+                "Bool" | "Boolean" => Value::Boolean(None),
+                _ => return Err(format!("Unknown variable type `{type_name}`; expected String, Number, or Bool")),
+            };
+            expressions.push(ResolvedExpression::Expression(Arc::new(Mutex::new(value))));
+        }
+        expressions
+    } else {
+        input
+            .expressions
+            .iter()
+            .map(|expression| resolve_individual_line(expression, block_type))
+            .collect::<Result<Vec<_>, _>>()?
+    };
 
     let in_namespace = |s: &String| keyword.origin == *s || keyword.origin.starts_with(&format!("{s}::"));
     let whitelisted = block_type.symbol_whitelist.is_empty()
@@ -241,7 +274,7 @@ fn resolve_call(input: &PsychoCall, block_type: &BlockType) -> Result<ResolvedEx
     }
 
     Ok(ResolvedExpression::KeywordCall(KeywordCall {
-        keyword,
+        keyword: keyword.clone(),
         args: resolved_expressions,
     }))
 }
@@ -293,24 +326,33 @@ fn search_for_let(
     match input {
         ResolvedExpression::KeywordCall(call) => {
             if call.keyword.origin == "i_core::datastore::var::let" {
-                for arg in &call.args {
-                    let ResolvedExpression::Expression(expression) = arg else {
-                        return Err("`let` requires a variable name".to_string());
-                    };
+                let Some(ResolvedExpression::Expression(expression)) = call.args.first() else {
+                    return Err("`let` requires a variable name".to_string());
+                };
 
-                    let mut expression = expression
+                let mut expression = expression
+                    .lock()
+                    .map_err(|_| "Could not lock declared variable".to_string())?;
+
+                let variable = expression
+                    .as_any_mut()
+                    .downcast_mut::<Variable>()
+                    .ok_or_else(|| "`let` requires a variable name".to_string())?;
+
+                assumed_variables.remove(&variable.name);
+                variable.origin = format!("{origin}/{}", variable.name);
+                variable.root = variable.origin.clone();
+                variable.identity = variable.root.clone();
+
+                if let Some(ResolvedExpression::Expression(type_expression)) = call.args.get(1) {
+                    let type_expression = type_expression
                         .lock()
-                        .map_err(|_| "Could not lock declared variable".to_string())?;
-
-                    let variable = expression
-                        .as_any_mut()
-                        .downcast_mut::<Variable>()
-                        .ok_or_else(|| "`let` requires a variable name".to_string())?;
-
-                    assumed_variables.remove(&variable.name);
-                    variable.origin = format!("{origin}/{}", variable.name);
-                    variable.root = variable.origin.clone();
-                    variable.identity = variable.root.clone();
+                        .map_err(|_| "Could not lock declared type".to_string())?;
+                    let variable_type = type_expression
+                        .as_any()
+                        .downcast_ref::<Value>()
+                        .ok_or_else(|| "`let` type must be String, Number, or Bool".to_string())?;
+                    variable.value = variable_type.clone();
                 }
             }
 

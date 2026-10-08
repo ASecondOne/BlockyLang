@@ -6,7 +6,7 @@ A Blocky program is a list of blocks. Each block has a type that controls **whic
 
 | Block | When it runs | Allowed keywords |
 |-------|--------------|------------------|
-| `<define>` | First | Only `let` |
+| `<define>` | First | `let` declarations, `mut` modifiers, and the `new` value constructor used in initializers |
 | `<execute>` | Second | Everything **except** `let` |
 
 ### Examples
