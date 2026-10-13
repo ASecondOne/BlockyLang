@@ -2,18 +2,18 @@
 
 use std::sync::{Arc, Mutex};
 
-use crate::{executers::ExcuterOutput, i_core::{datastore::var::Variable, value::Value}, symbolresolver::{localstate::LocalState, symbol_resolver::SharedExpression}};
+use crate::{executers::ExecuterOutput, i_core::{datastore::var::Variable, value::Value}, symbolresolver::{localstate::LocalState, symbol_resolver::SharedExpression}};
 
-pub fn i_inc_one(mut args: Vec<SharedExpression>, _local_state: &mut LocalState) -> ExcuterOutput {
+pub fn i_inc_one(mut args: Vec<SharedExpression>, _local_state: &mut LocalState) -> ExecuterOutput {
     if args.is_empty() {
-        return ExcuterOutput::Error("`inc_one` requires one argument".to_string());
+        return ExecuterOutput::Error("`inc_one` requires one argument".to_string());
     }
 
     let arg = args.remove(0);
 
     let arg = match arg.lock() {
         Ok(arg) => arg,
-        Err(_) => return ExcuterOutput::Error("Could not lock `inc_one` argument".to_string()),
+        Err(_) => return ExecuterOutput::Error("Could not lock `inc_one` argument".to_string()),
     };
 
     //? Variables get their value read first, values are used directly
@@ -22,15 +22,15 @@ pub fn i_inc_one(mut args: Vec<SharedExpression>, _local_state: &mut LocalState)
     } else if let Some(value) = arg.as_any().downcast_ref::<Value>() {
         value
     } else {
-        return ExcuterOutput::Error("`inc_one` requires a number or a variable".to_string());
+        return ExecuterOutput::Error("`inc_one` requires a number or a variable".to_string());
     };
 
     if let Value::Number(n) = value {
         if n.is_none() {
-            return ExcuterOutput::Error("Value has to be set for this operation".to_string());
+            return ExecuterOutput::Error("Value has to be set for this operation".to_string());
         }
-        return ExcuterOutput::ValidSome(Arc::new(Mutex::new(Value::Number(Some(n.unwrap() + 1)))));
+        return ExecuterOutput::ValidSome(Arc::new(Mutex::new(Value::Number(Some(n.unwrap() + 1)))));
     }
 
-    ExcuterOutput::Error("`inc_one` requires a number".to_string())
+    ExecuterOutput::Error("`inc_one` requires a number".to_string())
 }

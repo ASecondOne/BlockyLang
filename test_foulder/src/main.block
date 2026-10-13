@@ -11,6 +11,8 @@
     mut text;
     mut score;
     mut enabled;
+
+    trans counter;
 </define>
 
 <execute>
@@ -20,6 +22,9 @@
     println text.type();
     println score.type();
     println enabled.type();
+
+    println counter.get_AcMods();
+
 
     text = "Blocky Lang";
     score = 42;
@@ -41,7 +46,7 @@
     println text.get_AcMods();
     i_core::stdout::println "Full keyword paths work too";
 
-    counter.set_AcMods("mutabl");
+    counter.set_AcMods("mutabl", "transferabl");
     counter = inc_one counter;
     println counter;
 

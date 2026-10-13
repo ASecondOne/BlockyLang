@@ -84,7 +84,7 @@ impl LocalState {
             return Err("`transfer` must be called inside a closure".to_string());
         }
 
-        let (origin, value, access_modifires) = {
+        let (origin, value, access_modifiers) = {
             let local = local
                 .lock()
                 .map_err(|_| "Could not lock local variable for transfer".to_string())?;
@@ -95,7 +95,7 @@ impl LocalState {
             (
                 variable.origin.clone(),
                 variable.value.clone(),
-                variable.access_modifires.clone(),
+                variable.access_modifiers.clone(),
             )
         };
 
@@ -129,7 +129,7 @@ impl LocalState {
             .ok_or_else(|| format!("Transfer origin `{origin}` is not a variable"))?;
 
         target.value = value;
-        target.access_modifires = access_modifires;
+        target.access_modifiers = access_modifiers;
         Ok(())
     }
 }

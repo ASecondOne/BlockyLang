@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 
 use colored::Colorize;
 
-use crate::executers::ExcuterOutput;
+use crate::executers::ExecuterOutput;
 use crate::i_core::value::Value;
 use crate::i_core::datastore::{var::Variable, ASSUMEND_VARIABLES};
 use crate::i_core::{gather_blocktypes, gather_expression_parsers, gather_keywords};
@@ -18,7 +18,7 @@ pub trait Expression: Debug + Send {
     fn display(&self) -> Option<String>;
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
-    fn redirect(&mut self, new: SharedExpression) -> ExcuterOutput;
+    fn redirect(&mut self, new: SharedExpression) -> ExecuterOutput;
 }
 
 pub type SharedExpression = Arc<Mutex<dyn Expression>>;
@@ -68,8 +68,8 @@ impl Expression for Closure {
         self
     }
 
-    fn redirect(&mut self, _: SharedExpression) -> ExcuterOutput {
-        ExcuterOutput::Error("Cannot redirect into a closure".to_string())
+    fn redirect(&mut self, _: SharedExpression) -> ExecuterOutput {
+        ExecuterOutput::Error("Cannot redirect into a closure".to_string())
     }
 }
 
@@ -90,7 +90,7 @@ pub struct KeywordCall {
 #[derive(Clone, Debug)]
 pub struct Keyword {
     pub origin: String,
-    pub execute: fn(Vec<SharedExpression>, &mut LocalState) -> ExcuterOutput,
+    pub execute: fn(Vec<SharedExpression>, &mut LocalState) -> ExecuterOutput,
 }
 
 impl Keyword {

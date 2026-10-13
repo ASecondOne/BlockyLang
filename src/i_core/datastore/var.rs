@@ -2,9 +2,9 @@
 
 use std::{collections::HashSet, sync::{Arc, Mutex}};
 
-use crate::{executers::ExcuterOutput, i_core::{datastore::{access_modifires::AccessModifires, helpers::{get_value, get_variable, string_expression, take_first_argument}}, value::Value}, symbolresolver::{localstate::LocalState, symbol_resolver::{Expression, SharedExpression}}};
+use crate::{executers::ExecuterOutput, i_core::{datastore::{access_modifiers::AccessModifiers, helpers::{get_value, get_variable, string_expression, take_first_argument}}, value::Value}, symbolresolver::{localstate::LocalState, symbol_resolver::{Expression, SharedExpression}}};
 
-// //? Later needs access modifirers, traits and so on
+// //? Later needs access modifiers, traits and so on
 #[derive(Debug, Clone)]
 pub struct Variable {
     pub name: String,
@@ -14,7 +14,7 @@ pub struct Variable {
     pub root: String,
     /// Identity of this particular copy in its current scope.
     pub identity: String,
-    pub access_modifires: HashSet<AccessModifires>,
+    pub access_modifiers: HashSet<AccessModifiers>,
     pub value: Value,
 }
 
@@ -35,19 +35,19 @@ impl Expression for Variable {
         self
     }
 
-    fn redirect(&mut self, new: SharedExpression) -> ExcuterOutput {
+    fn redirect(&mut self, new: SharedExpression) -> ExecuterOutput {
         let mut new = match new.lock() {
             Ok(new) => new,
-            Err(_) => return ExcuterOutput::Error("Could not lock redirect value".to_string()),
+            Err(_) => return ExecuterOutput::Error("Could not lock redirect value".to_string()),
         };
 
-        if !self.access_modifires.contains(&AccessModifires::Mutabl) {
+        if !self.access_modifiers.contains(&AccessModifiers::Mutabl) {
 
-            if self.access_modifires.contains(&AccessModifires::OneTimeMutabl) {
-                self.access_modifires.remove(&AccessModifires::OneTimeMutabl);
+            if self.access_modifiers.contains(&AccessModifiers::OneTimeMutabl) {
+                self.access_modifiers.remove(&AccessModifiers::OneTimeMutabl);
                 
             } else {
-                return ExcuterOutput::Error("Variable requires Mutabl access modifier to be changed".to_string());
+                return ExecuterOutput::Error("Variable requires Mutabl access modifier to be changed".to_string());
             }
         } 
 
@@ -56,74 +56,89 @@ impl Expression for Variable {
                 &self.value == &Value::default()
             {
                 self.value = std::mem::take(new_value);
-                return ExcuterOutput::ValidNone;
+                return ExecuterOutput::ValidNone;
             } else {
-                return ExcuterOutput::Error("The new value must match the old one".to_string());
+                return ExecuterOutput::Error("The new value must match the old one".to_string());
             }
         }
         
-        ExcuterOutput::Error("A variable can only receive a value".to_string())
+        ExecuterOutput::Error("A variable can only receive a value".to_string())
     }
 }
 
-pub fn i_let(mut args: Vec<SharedExpression>, _local_state: &mut LocalState) -> ExcuterOutput {
+pub fn i_let(mut args: Vec<SharedExpression>, _local_state: &mut LocalState) -> ExecuterOutput {
     let Some(arg) = take_first_argument(&mut args) else {
-        return ExcuterOutput::Error("`let` requires a variable name".to_string());
+        return ExecuterOutput::Error("`let` requires a variable name".to_string());
     };
 
     match get_variable(&arg) {
-        Ok(Some(_)) => ExcuterOutput::ValidSome(arg),
-        Ok(None) => ExcuterOutput::Error("`let` requires a variable name".to_string()),
-        Err(message) => ExcuterOutput::Error(message),
+        Ok(Some(_)) => ExecuterOutput::ValidSome(arg),
+        Ok(None) => ExecuterOutput::Error("`let` requires a variable name".to_string()),
+        Err(message) => ExecuterOutput::Error(message),
     }
 }
 
-pub fn i_type(mut args: Vec<SharedExpression>, _local_state: &mut LocalState) -> ExcuterOutput {
+pub fn i_type(mut args: Vec<SharedExpression>, _local_state: &mut LocalState) -> ExecuterOutput {
     let Some(arg) = take_first_argument(&mut args) else {
-        return ExcuterOutput::Error("`type` requires a variable name".to_string());
+        return ExecuterOutput::Error("`type` requires a variable name".to_string());
     };
 
     match get_variable(&arg) {
         Ok(Some(variable)) => type_matcher(&variable.value),
         Ok(None) => match get_value(&arg) {
             Ok(Some(value)) => type_matcher(&value),
-            Ok(None) => ExcuterOutput::Error("`type` requires a variable or value".to_string()),
-            Err(message) => ExcuterOutput::Error(message),
+            Ok(None) => ExecuterOutput::Error("`type` requires a variable or value".to_string()),
+            Err(message) => ExecuterOutput::Error(message),
         },
-        Err(message) => ExcuterOutput::Error(message),
+        Err(message) => ExecuterOutput::Error(message),
     }
 }
 
-pub fn i_origin(mut args: Vec<SharedExpression>, _local_state: &mut LocalState) -> ExcuterOutput {
+pub fn i_origin(mut args: Vec<SharedExpression>, _local_state: &mut LocalState) -> ExecuterOutput {
     let Some(arg) = take_first_argument(&mut args) else {
-        return ExcuterOutput::Error("`origin` requires a variable name".to_string());
+        return ExecuterOutput::Error("`origin` requires a variable name".to_string());
     };
 
     match get_variable(&arg) {
-        Ok(Some(variable)) => ExcuterOutput::ValidSome(string_expression(variable.origin)),
-        Ok(None) => ExcuterOutput::Error("`origin` requires a variable name".to_string()),
-        Err(message) => ExcuterOutput::Error(message),
+        Ok(Some(variable)) => ExecuterOutput::ValidSome(string_expression(variable.origin)),
+        Ok(None) => ExecuterOutput::Error("`origin` requires a variable name".to_string()),
+        Err(message) => ExecuterOutput::Error(message),
     }
 }
 
-pub fn i_transfer(mut args: Vec<SharedExpression>, local_state: &mut LocalState) -> ExcuterOutput {
+pub fn i_transfer(mut args: Vec<SharedExpression>, local_state: &mut LocalState) -> ExecuterOutput {
     if args.len() != 1 {
         if args.is_empty() {
-            return ExcuterOutput::Error("`transfer` requires one variable".to_string());
+            return ExecuterOutput::Error("`transfer` requires one variable".to_string());
         }
-        return ExcuterOutput::Error("`transfer` accepts one variable".to_string());
+        return ExecuterOutput::Error("`transfer` accepts one variable".to_string());
     }
 
     let arg = take_first_argument(&mut args).unwrap();
+
+    match get_variable(&arg) {
+        Ok(Some(variable)) => {
+            if !variable.access_modifiers.contains(&AccessModifiers::Transferabl) {
+                return ExecuterOutput::Error("Variable requires Transferabl access modifier to be transferred".to_string());
+            }
+        },
+        Ok(None) => {
+            return ExecuterOutput::Error("`transfer` requires a variable name".to_string());
+        },
+        Err(message) => {
+            return ExecuterOutput::Error(message);
+        },
+    };
+
     match local_state.transfer(arg) {
-        Ok(()) => ExcuterOutput::ValidNone,
-        Err(message) => ExcuterOutput::Error(message),
+        Ok(()) => ExecuterOutput::ValidNone,
+        Err(message) => ExecuterOutput::Error(message),
     }
 }
 
-fn type_matcher(value: &Value) -> ExcuterOutput {
+fn type_matcher(value: &Value) -> ExecuterOutput {
     match value {
-            &Value::Boolean(_) => return ExcuterOutput::ValidSome(
+            &Value::Boolean(_) => return ExecuterOutput::ValidSome(
                 Arc::new(
                     Mutex::new(
                             Value::String(Some("Boolean".to_string()))
@@ -131,7 +146,7 @@ fn type_matcher(value: &Value) -> ExcuterOutput {
                     )
                 ),
 
-            &Value::String(_) => return ExcuterOutput::ValidSome(
+            &Value::String(_) => return ExecuterOutput::ValidSome(
                 Arc::new(
                     Mutex::new(
                             Value::String(Some("String".to_string()))
@@ -139,7 +154,7 @@ fn type_matcher(value: &Value) -> ExcuterOutput {
                     )
                 ),
 
-            &Value::Number(_) => return ExcuterOutput::ValidSome(
+            &Value::Number(_) => return ExecuterOutput::ValidSome(
                 Arc::new(
                     Mutex::new(
                             Value::String(Some("Number".to_string()))
@@ -147,7 +162,7 @@ fn type_matcher(value: &Value) -> ExcuterOutput {
                     )
                 ),
 
-            &Value::Undefined => return ExcuterOutput::ValidSome(
+            &Value::Undefined => return ExecuterOutput::ValidSome(
                 Arc::new(
                     Mutex::new(
                             Value::String(Some("Undefined".to_string()))

@@ -1,4 +1,4 @@
-use crate::{executers::ExcuterOutput::{self, ValidNone, ValidSome}, symbolresolver::{localstate::LocalState, symbol_resolver::{ ResolvedBlock, ResolvedExpression, SharedExpression}}};
+use crate::{executers::ExecuterOutput::{self, ValidNone, ValidSome}, symbolresolver::{localstate::LocalState, symbol_resolver::{ ResolvedBlock, ResolvedExpression, SharedExpression}}};
 
 pub fn dirty_executer(input: Vec<ResolvedBlock>) {
     for block in input {
@@ -8,7 +8,7 @@ pub fn dirty_executer(input: Vec<ResolvedBlock>) {
     }
 }
 
-fn execute(input: ResolvedExpression, local_state: &mut LocalState) -> ExcuterOutput {
+fn execute(input: ResolvedExpression, local_state: &mut LocalState) -> ExecuterOutput {
     match input {
         ResolvedExpression::Expression(e) => match local_state.resolve(e) {
             Ok(expression) => ValidSome(expression),
@@ -16,7 +16,7 @@ fn execute(input: ResolvedExpression, local_state: &mut LocalState) -> ExcuterOu
         },
 
         ResolvedExpression::KeywordCall(k) => {
-            let args: Vec<ExcuterOutput> = k.args
+            let args: Vec<ExecuterOutput> = k.args
                 .into_iter()
                 .map(|arg| execute(arg, local_state))
                 .collect();
@@ -26,7 +26,7 @@ fn execute(input: ResolvedExpression, local_state: &mut LocalState) -> ExcuterOu
                 .filter_map(|a| match a {
                     ValidSome(e) => Some(e),
                     ValidNone => {println!("Missing Argument"); None},
-                    ExcuterOutput::Error(_) => None,
+                    ExecuterOutput::Error(_) => None,
                 })
                 .collect();
 

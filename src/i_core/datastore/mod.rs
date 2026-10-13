@@ -5,7 +5,7 @@ use std::{collections::HashSet, sync::{Arc, LazyLock, Mutex}};
 use crate::{i_core::datastore::var::Variable, symbolresolver::symbol_resolver::SharedExpression};
 
 pub mod var;
-pub mod access_modifires;
+pub mod access_modifiers;
 pub mod helpers;
 
 pub static ASSUMEND_VARIABLES: LazyLock<Mutex<HashSet<String>>> = LazyLock::new(|| Mutex::new(HashSet::new()));
@@ -37,12 +37,12 @@ pub fn variable_parse(input: &str) -> Option<SharedExpression> {
         origin: String::new(),
         root: String::new(),
         identity: String::new(),
-        access_modifires: HashSet::new(),
+        access_modifiers: HashSet::new(),
         value: super::value::Value::Undefined,
     };
 
     // * Needed so the first redirect can cautomatically set the value type
-    var.access_modifires.insert(access_modifires::AccessModifires::OneTimeMutabl);
+    var.access_modifiers.insert(access_modifiers::AccessModifiers::OneTimeMutabl);
 
     let var: SharedExpression = Arc::new(Mutex::new(var));
 

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{i_core::{conditions::i_if, datastore::{access_modifires::{i_get_acmods, i_mut, i_set_acmods}, var::{i_let, i_origin, i_transfer, i_type}, variable_parse}, math::i_inc_one, stdout::{i_print, i_println}, value::{i_new, value_parser}}, symbolresolver::symbol_resolver::{BlockType, ExpressionParser, Keyword}};
+use crate::{i_core::{conditions::i_if, datastore::{access_modifiers::{i_get_acmods, i_mut, i_set_acmods, i_trans}, var::{i_let, i_origin, i_transfer, i_type}, variable_parse}, math::i_inc_one, stdout::{i_print, i_println}, value::{i_new, value_parser}}, symbolresolver::symbol_resolver::{BlockType, ExpressionParser, Keyword}};
 
 pub(crate) mod value;
 mod math;
@@ -73,18 +73,23 @@ pub fn gather_keywords() -> Vec<Keyword> {
     });
 
     out.push(Keyword { 
-        origin: "i_core::datastore::access_modifires::get_AcMods".to_string(), 
+        origin: "i_core::datastore::access_modifiers::get_AcMods".to_string(), 
         execute: i_get_acmods 
     });
 
     out.push(Keyword { 
-        origin: "i_core::datastore::access_modifires::set_AcMods".to_string(), 
+        origin: "i_core::datastore::access_modifiers::set_AcMods".to_string(), 
         execute: i_set_acmods 
     });
 
     out.push(Keyword {
-        origin: "i_core::datastore::access_modifires::mut".to_string(),
+        origin: "i_core::datastore::access_modifiers::mut".to_string(),
         execute: i_mut
+    });
+
+    out.push(Keyword {
+        origin: "i_core::datastore::access_modifiers::trans".to_string(),
+        execute: i_trans
     });
 
     out.push(Keyword { 
@@ -110,7 +115,11 @@ pub fn gather_blocktypes() -> Vec<Arc<BlockType>> {
     out.push(Arc::new(BlockType {
         name: "define".to_string(),
         symbol_blacklist: vec![],
-        symbol_whitelist: vec!["i_core::datastore::var::let".to_string(), "i_core::value::new".to_string(), "i_core::datastore::access_modifires::mut".to_string()],
+        symbol_whitelist: vec!["i_core::datastore::var::let".to_string(), 
+            "i_core::value::new".to_string(), 
+            "i_core::datastore::access_modifiers::mut".to_string(),
+            "i_core::datastore::access_modifiers::trans".to_string(),
+        ],
         execution_order: 1,
     }));
 

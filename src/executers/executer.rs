@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use colored::Colorize;
 
 use crate::{
-    executers::ExcuterOutput::{self, Error, ValidNone, ValidSome}, symbolresolver::{localstate::LocalState, symbol_resolver::{Closure, ResolvedBlock, ResolvedExpression, SharedExpression}},
+    executers::ExecuterOutput::{self, Error, ValidNone, ValidSome}, symbolresolver::{localstate::LocalState, symbol_resolver::{Closure, ResolvedBlock, ResolvedExpression, SharedExpression}},
 };
 
 pub fn executer(mut input: Vec<ResolvedBlock>) {
@@ -21,11 +21,11 @@ pub fn executer(mut input: Vec<ResolvedBlock>) {
     }
 }
 
-fn execute(input: ResolvedExpression) -> ExcuterOutput {
+fn execute(input: ResolvedExpression) -> ExecuterOutput {
     execute_in_state(input, &mut LocalState::default())
 }
 
-fn execute_in_state(input: ResolvedExpression, local_state: &mut LocalState) -> ExcuterOutput {
+fn execute_in_state(input: ResolvedExpression, local_state: &mut LocalState) -> ExecuterOutput {
     match input {
         ResolvedExpression::Expression(expression) => match local_state.resolve(expression) {
             Ok(expression) => ValidSome(expression),
@@ -82,7 +82,7 @@ fn execute_in_state(input: ResolvedExpression, local_state: &mut LocalState) -> 
     }
 }
 
-pub fn execute_closure(closure: &mut Closure, local_state: &mut LocalState) -> ExcuterOutput {
+pub fn execute_closure(closure: &mut Closure, local_state: &mut LocalState) -> ExecuterOutput {
     closure.local_state = match local_state.fork() {
         Ok(state) => state,
         Err(message) => return Error(message),
