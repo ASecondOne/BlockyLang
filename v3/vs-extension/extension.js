@@ -6,13 +6,14 @@ const BUILTINS = [
     ['new', 'Create an unset String, Number, or Bool value.'],
     ['type', 'Return the kind of a value or variable.'],
     ['origin', 'Return the declaration origin of a variable.'],
-    ['transfer', 'Copy a closure-local variable to its immediate parent scope.'],
+    ['transfer', 'Copy a Transferabl closure-local variable and its access modifiers to its immediate parent scope.'],
     ['inc_one', 'Return a number increased by one.'],
     ['print', 'Print a value without a trailing newline.'],
     ['println', 'Print a value followed by a newline.'],
     ['get_AcMods', 'Read a variable’s access modifiers.'],
-    ['set_AcMods', 'Set access modifiers, currently including "mutabl".'],
-    ['mut', 'Add the Mutabl access modifier to a variable.']
+    ['set_AcMods', 'Replace access modifiers with "mutabl" and/or "transferabl".'],
+    ['mut', 'Add the Mutabl access modifier to a variable.'],
+    ['trans', 'Add the Transferabl access modifier required by transfer.']
 ];
 
 const KEYWORD_HELP = new Map(BUILTINS);
@@ -203,21 +204,30 @@ function provideTypeHints(document, requestedRange) {
     const declarations = [];
     const types = new Map();
     const modifierEdits = [];
+    const formatAccess = modifiers => {
+        const access = ['M', 'T'].filter(modifier => modifiers.has(modifier)).join('');
+        return access ? `:${access}` : '';
+    };
     let currentBlock = null;
 
     for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
         const line = lines[lineNumber];
         const mutDeclaration = line.match(/^\s*mut\s+([A-Za-z_][A-Za-z0-9_]*)\s*;?\s*$/);
-        const mutMethod = line.match(/\b([A-Za-z_][A-Za-z0-9_]*)\.set_AcMods\s*\(\s*"([^"]*)"\s*\)/i);
-        const mutSpaceCall = line.match(/\bset_AcMods\s+([A-Za-z_][A-Za-z0-9_]*)\s*,\s*"([^"]*)"/i);
-        if (mutDeclaration) {
-            modifierEdits.push({ name: mutDeclaration[1], line: lineNumber, mutable: true });
-        }
-        const methodEdit = mutMethod && { name: mutMethod[1], mutable: /\bmutabl\b/i.test(mutMethod[2]) };
-        const spaceEdit = mutSpaceCall && { name: mutSpaceCall[1], mutable: /\bmutabl\b/i.test(mutSpaceCall[2]) };
-        const modifierEdit = methodEdit || spaceEdit;
-        if (modifierEdit) {
-            modifierEdits.push({ name: modifierEdit.name, line: lineNumber, mutable: modifierEdit.mutable });
+        const transDeclaration = line.match(/^\s*trans\s+([A-Za-z_][A-Za-z0-9_]*)\s*;?\s*$/);
+        const methodEdit = line.match(/\b([A-Za-z_][A-Za-z0-9_]*)\.set_AcMods\s*\(([^)]*)\)/i);
+        const spaceEdit = line.match(/\bset_AcMods\s+([A-Za-z_][A-Za-z0-9_]*)\s*,\s*(.*?);?\s*$/i);
+        if (mutDeclaration) modifierEdits.push({ name: mutDeclaration[1], line: lineNumber, add: 'M' });
+        if (transDeclaration) modifierEdits.push({ name: transDeclaration[1], line: lineNumber, add: 'T' });
+        const setCall = methodEdit
+            ? { name: methodEdit[1], args: methodEdit[2] }
+            : spaceEdit && { name: spaceEdit[1], args: spaceEdit[2] };
+        if (setCall) {
+            const modifiers = new Set();
+            for (const [, modifier] of setCall.args.matchAll(/"([^"]*)"/g)) {
+                if (/\bmutabl\b/i.test(modifier)) modifiers.add('M');
+                if (/\btransferabl\b/i.test(modifier)) modifiers.add('T');
+            }
+            modifierEdits.push({ name: setCall.name, line: lineNumber, replace: [...modifiers] });
         }
         const block = line.trim().match(/^<(define|execute)>$/);
         const close = line.trim().match(/^<\/(define|execute)>$/);
@@ -249,16 +259,21 @@ function provideTypeHints(document, requestedRange) {
 
     // Snapshot access at each declaration; later modifier changes must not
     // retroactively mark the declaration as mutable.
-    const mutableState = new Set();
+    const accessState = new Map();
+    const updateAccess = edit => {
+        let modifiers = accessState.get(edit.name);
+        if (!modifiers) modifiers = new Set();
+        if (edit.replace) modifiers = new Set(edit.replace);
+        if (edit.add) modifiers.add(edit.add);
+        accessState.set(edit.name, modifiers);
+    };
     let editIndex = 0;
     const orderedEdits = modifierEdits.slice().sort((left, right) => left.line - right.line);
     for (const declaration of declarations) {
         while (editIndex < orderedEdits.length && orderedEdits[editIndex].line < declaration.line) {
-            const edit = orderedEdits[editIndex++];
-            if (edit.mutable) mutableState.add(edit.name);
-            else mutableState.delete(edit.name);
+            updateAccess(orderedEdits[editIndex++]);
         }
-        declaration.mutableAtDeclaration = mutableState.has(declaration.name);
+        declaration.accessAtDeclaration = accessState.get(declaration.name) || new Set();
     }
 
     const hints = [];
@@ -269,7 +284,7 @@ function provideTypeHints(document, requestedRange) {
 
         const line = lines[declaration.line];
         const nameStart = line.indexOf(declaration.name, line.indexOf('let') + 3);
-        const accessHint = declaration.mutableAtDeclaration ? ':M' : '';
+        const accessHint = formatAccess(declaration.accessAtDeclaration);
         const hint = new vscode.InlayHint(
             new vscode.Position(declaration.line, nameStart + declaration.name.length),
             `: ${type}${accessHint}`,
@@ -280,19 +295,16 @@ function provideTypeHints(document, requestedRange) {
         hints.push(hint);
     }
 
-    mutableState.clear();
+    accessState.clear();
     for (const edit of modifierEdits) {
         const type = types.get(edit.name);
         if (!type || edit.line < requestedRange.start.line || edit.line > requestedRange.end.line) {
-            if (edit.mutable) mutableState.add(edit.name);
-            else mutableState.delete(edit.name);
+            updateAccess(edit);
             continue;
         }
-        const wasMutable = mutableState.has(edit.name);
-        const before = `${type}${wasMutable ? ':M' : ''}`;
-        if (edit.mutable) mutableState.add(edit.name);
-        else mutableState.delete(edit.name);
-        const after = `${type}${edit.mutable ? ':M' : ''}`;
+        const before = `${type}${formatAccess(accessState.get(edit.name) || new Set())}`;
+        updateAccess(edit);
+        const after = `${type}${formatAccess(accessState.get(edit.name) || new Set())}`;
         const line = lines[edit.line];
         const hint = new vscode.InlayHint(
             new vscode.Position(edit.line, line.length),

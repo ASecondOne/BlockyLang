@@ -62,7 +62,7 @@
         "blocky.inlayHints.types": {
           "type": "boolean",
           "default": true,
-          "description": "Show inferred types after variable names in let declarations."
+          "description": "Show inferred types and access-modifier changes for variables."
         }
       }
     }

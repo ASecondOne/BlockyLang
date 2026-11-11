@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use crate::{executers::ExecuterOutput, i_core::datastore::helpers::take_first_argument, symbolresolver::{localstate::LocalState, symbol_resolver::{Expression, SharedExpression}}};
+use crate::{executers::ExecuterOutput, i_core::{datastore::helpers::take_first_argument}, symbolresolver::{localstate::LocalState, symbol_resolver::{Expression, SharedExpression}}};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub enum Value {
@@ -32,7 +32,7 @@ impl Expression for Value {
             Value::Boolean(s) => {
                 if s.is_none() { return Some("Undefined".to_string()); }
                 return Some(s.unwrap().to_string());
-            }
+            },
             Value::Undefined => {
                 return Some("Undefined".to_string());
             }

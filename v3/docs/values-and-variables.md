@@ -96,16 +96,17 @@ Assigning a different value kind is an execution error. Values themselves are no
 
 ## Access modifiers
 
-Use `mut name;` to add the `Mutabl` modifier concisely. `set_AcMods("mutabl")` is also available and replaces the modifier set. `get_AcMods` returns a string describing the current set. `OneTimeMutabl` is an internal initialization permission and should not be passed to `set_AcMods`.
+Use `mut name;` to add the `Mutabl` modifier and `trans name;` to add the `Transferabl` modifier; both preserve other modifiers. `set_AcMods("mutabl", "transferabl")` replaces the modifier set with the supplied modifiers. `Transferabl` is required to use `transfer` inside a closure. `get_AcMods` returns a string describing the current set. `OneTimeMutabl` is an internal initialization permission and should not be passed to `set_AcMods`.
 
 ```blocky
 <define>
     let score = 10;
     mut score;
+    trans score;
 </define>
 <execute>
     println score.get_AcMods();
 </execute>
 ```
 
-Inside a closure, variable changes are local unless transferred outward. See [closures-and-scope.md](closures-and-scope.md).
+Inside a closure, variable changes are local unless transferred outward. Mark a variable `Transferabl` first. See [closures-and-scope.md](closures-and-scope.md).

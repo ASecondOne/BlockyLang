@@ -68,7 +68,7 @@ Declares one variable and is allowed only in `<define>`. The first argument is t
 
 ## `mut`
 
-**Full path:** `i_core::datastore::access_modifires::mut`
+**Full path:** `i_core::datastore::access_modifiers::mut`
 
 Takes one variable and adds the ongoing `Mutabl` modifier without replacing any other modifiers. It is allowed in `<define>` and `<execute>` blocks. `OneTimeMutabl` is reserved for initialization.
 
@@ -131,18 +131,38 @@ The returned value displays as `Undefined` until assigned. Assigning into a type
 
 ## `get_AcMods` and `set_AcMods`
 
-**Full paths:** `i_core::datastore::access_modifires::get_AcMods`, `i_core::datastore::access_modifires::set_AcMods`
+**Full paths:** `i_core::datastore::access_modifiers::get_AcMods`, `i_core::datastore::access_modifiers::set_AcMods`
 
-`get_AcMods` returns the access modifiers as a string. `set_AcMods` takes a variable followed by modifier strings; `"mutabl"` enables ongoing assignment. `OneTimeMutabl` is an internal initializer permission and is not set through this keyword.
+`get_AcMods` returns the access modifiers as a string. `set_AcMods` takes a variable followed by modifier strings; `"mutabl"` enables ongoing assignment and `"transferabl"` permits `transfer`. It replaces the variable's modifier set with the modifiers provided. `OneTimeMutabl` is an internal initializer permission and is not set through this keyword.
 
 ```blocky
 <define>
     let count = 1;
 </define>
 <execute>
-    count.set_AcMods("mutabl");
+    count.set_AcMods("mutabl", "transferabl");
     println count.get_AcMods();
     count = 2;
+</execute>
+```
+
+Use `mut count;` to add only `Mutabl`, or `trans count;` to add only `Transferabl`, without replacing other modifiers.
+
+## `trans`
+
+**Full path:** `i_core::datastore::access_modifiers::trans`
+
+Takes one variable and adds the `Transferabl` modifier, which allows that variable to be passed to `transfer` from a closure. It preserves any other access modifiers.
+
+```blocky
+<define>
+    let count = 1;
+    trans count;
+</define>
+<execute>
+    if true, {
+        transfer count;
+    }
 </execute>
 ```
 
@@ -150,14 +170,14 @@ The returned value displays as `Undefined` until assigned. Assigning into a type
 
 **Full path:** `i_core::datastore::var::transfer`
 
-Takes one variable and must run inside a closure. It copies the local variable's current value and access modifiers to its immediate origin. In nested closures, transfer one level at a time.
+Takes one `Transferabl` variable and must run inside a closure. It copies the local variable's current value and access modifiers to its immediate origin. In nested closures, transfer one level at a time. Use `trans name;` or `set_AcMods("transferabl")` to grant `Transferabl`.
 
 ```blocky
 <define>
     let count = 1;
 </define>
 <execute>
-    count.set_AcMods("mutabl");
+    count.set_AcMods("mutabl", "transferabl");
     if true, {
         count = 2;
         transfer count;
@@ -171,4 +191,4 @@ See [closures-and-scope.md](closures-and-scope.md) for local-copy behavior and n
 ## Current limits
 
 - Keywords are built in; user-defined keywords are not supported.
-- `set_AcMods` currently recognizes only the string `"mutabl"`; `mut name;` is the short form for adding it.
+- `set_AcMods` recognizes `"mutabl"` and `"transferabl"`; `mut name;` and `trans name;` add those modifiers without replacing other modifiers.

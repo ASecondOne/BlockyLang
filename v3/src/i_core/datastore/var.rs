@@ -136,6 +136,10 @@ pub fn i_transfer(mut args: Vec<SharedExpression>, local_state: &mut LocalState)
     }
 }
 
+pub fn i_ref(mut args: Vec<SharedExpression>, _local_state: &mut LocalState) -> ExecuterOutput { 
+    ExecuterOutput::ValidNone
+}
+
 fn type_matcher(value: &Value) -> ExecuterOutput {
     match value {
             &Value::Boolean(_) => return ExecuterOutput::ValidSome(

@@ -42,7 +42,7 @@ Minimal program:
 
 - A closure can only run **once**.
 - Parentheses are for calls like `foo(bar)`, **not** for grouping — `println (5)` fails.
-- `mut name;` adds ongoing assignment permission; `set_AcMods` currently recognizes only `"mutabl"`. `OneTimeMutabl` is reserved for initialization.
+- `mut name;` adds ongoing assignment permission and `trans name;` permits `transfer`; `set_AcMods` recognizes `"mutabl"` and `"transferabl"`. `OneTimeMutabl` is reserved for initialization.
 - `blocky.toml` `[imports]` / `[unimportes]` are not used yet.
 - All `src/*.block` files are treated as one combined program.
 - There is no comment syntax.

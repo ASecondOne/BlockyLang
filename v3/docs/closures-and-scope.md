@@ -34,6 +34,7 @@ When a closure runs, variables you touch inside it become **local copies**. Assi
 </define>
 <execute>
     x = 1;
+    x.set_AcMods("mutabl");
     if true, {
         x = 99;
         println x;
@@ -55,6 +56,7 @@ When a closure runs, variables you touch inside it become **local copies**. Assi
 </define>
 <execute>
     x = 1;
+    x.set_AcMods("mutabl", "transferabl");
     if true, {
         x = 99;
         transfer x;
@@ -67,7 +69,7 @@ When a closure runs, variables you touch inside it become **local copies**. Assi
 99
 ```
 
-`transfer` must be called **inside** a closure. Outside one it fails with `` `transfer` must be called inside a closure ``.
+`transfer` requires the local variable to have the `Transferabl` modifier and must be called **inside** a closure. Outside one it fails with `` `transfer` must be called inside a closure ``. Grant the modifier with `trans x;` or `x.set_AcMods("transferabl");`. A successful transfer copies both the local value and its access modifiers to the immediate origin.
 
 ## Nested closures and `transfer`
 
@@ -78,7 +80,7 @@ Each `if` has its own closure, so nested closures get nested local states. `tran
     let count = 1;
 </define>
 <execute>
-    count.set_AcMods("mutabl");
+    count.set_AcMods("mutabl", "transferabl");
     if true, {
         count = inc_one count;
         if true, {
@@ -107,4 +109,4 @@ After a closure has been run, it cannot be run again. Separate closures (for exa
 
 - Closures do not return a value to the caller.
 - A given closure body can only run once.
-- `transfer` is the only way to push a local change back outward.
+- `transfer` is the only way to push a local change back outward, and the local variable must have `Transferabl`.

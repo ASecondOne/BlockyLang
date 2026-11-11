@@ -126,12 +126,13 @@ Anything else that is not a keyword call is treated as a **variable name**.
 - Assigning into a bare value (for example `5 = 10`) fails.
 - Variables have a one-time initialization allowance. Later assignments require the `Mutabl` access modifier and must preserve the variable's value kind.
 
-In `<define>`, give a variable an explicit type with a comma and optionally add `mut` to permit ongoing assignment:
+In `<define>`, give a variable an explicit type with a comma and optionally add `mut` for ongoing assignment or `trans` to permit `transfer` from a closure:
 
 ```blocky
 <define>
     let name, String = "Blocky";
     mut name;
+    trans name;
 </define>
 ```
 

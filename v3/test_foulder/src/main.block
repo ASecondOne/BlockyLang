@@ -1,0 +1,16 @@
+<define>
+    let a = "Hi";
+
+    let b, String;
+</define>
+
+<execute>
+    print a;
+
+    mut b;
+
+    mut a;
+    trans a;
+
+    
+</execute>

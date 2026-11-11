@@ -4,16 +4,18 @@ set -euo pipefail
 EXTENSION_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VSCODE_COMMAND=""
 
-if command -v code >/dev/null 2>&1; then
-    VSCODE_COMMAND="code"
-elif command -v codium >/dev/null 2>&1; then
+if command -v codium >/dev/null 2>&1; then
     VSCODE_COMMAND="codium"
+    DEFAULT_EXTENSIONS_DIR="${HOME}/.vscode-oss/extensions"
+elif command -v code >/dev/null 2>&1; then
+    VSCODE_COMMAND="code"
+    DEFAULT_EXTENSIONS_DIR="${HOME}/.vscode/extensions"
 else
     echo "Could not find the VS Code or VSCodium command-line tool (code/codium)." >&2
     exit 1
 fi
 
-EXTENSIONS_DIR="${VSCODE_EXTENSIONS_DIR:-${HOME}/.vscode/extensions}"
+EXTENSIONS_DIR="${VSCODE_EXTENSIONS_DIR:-${DEFAULT_EXTENSIONS_DIR}}"
 INSTALL_PATH="${EXTENSIONS_DIR}/blocky-lang-local.blocky-lang-0.1.0"
 
 mkdir -p "${EXTENSIONS_DIR}"
@@ -26,4 +28,4 @@ fi
 
 ln -s "${EXTENSION_ROOT}" "${INSTALL_PATH}"
 echo "Installed Blocky Lang extension for ${VSCODE_COMMAND} at: ${INSTALL_PATH}"
-echo "Reload VS Code to activate it."
+echo "Reload ${VSCODE_COMMAND} to activate it."

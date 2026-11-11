@@ -25,7 +25,7 @@
     },
     "keywords": {
       "name": "keyword.control.blocky",
-      "match": "\\b(if|let|mut|transfer|new|type|origin|inc_one|print|println|get_AcMods|set_AcMods)\\b"
+      "match": "\\b(if|let|mut|trans|transfer|new|type|origin|inc_one|print|println|get_AcMods|set_AcMods)\\b"
     },
     "constants": {
       "name": "constant.language.blocky",
