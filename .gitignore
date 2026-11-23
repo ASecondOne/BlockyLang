@@ -10,3 +10,7 @@ v2/Cargo.lock/
 
 v3/target/
 v3/Cargo.lock/
+
+# Added by cargo
+
+/target
